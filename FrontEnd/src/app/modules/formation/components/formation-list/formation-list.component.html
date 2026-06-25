@@ -1,0 +1,514 @@
+<div class="lh-page">
+
+  <!-- TOP NAV BAR (replaces sidebar) -->
+  <header class="lh-topbar">
+    <div class="topbar-brand">
+      <div class="tb-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+      </div>
+      <span class="tb-title">Mes Formations</span>
+    </div>
+
+    <nav class="topbar-tabs">
+      <button class="tb-tab" [class.active]="activeTab() === 'DASHBOARD'" (click)="activeTab.set('DASHBOARD')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Tableau de bord
+      </button>
+      <button class="tb-tab" [class.active]="activeTab() === 'KANBAN'" (click)="activeTab.set('KANBAN')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        Mes Cours
+      </button>
+      <button class="tb-tab" [class.active]="activeTab() === 'ROADMAP'" (click)="activeTab.set('ROADMAP')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        Roadmap IA
+      </button>
+      <button class="tb-tab" [class.active]="activeTab() === 'RECOMMANDATIONS'" (click)="activeTab.set('RECOMMANDATIONS')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+        Recommandations
+      </button>
+      <button class="tb-tab" [class.active]="activeTab() === 'GAMIFICATION'" (click)="activeTab.set('GAMIFICATION')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+        Classement
+      </button>
+    </nav>
+
+    <div class="topbar-actions">
+      @if (currentUserGamification(); as g) {
+        <div class="xp-pill">
+          <span class="lvl-badge">LVL {{ g.level }}</span>
+          <div class="xp-bar-wrap"><div class="xp-bar-fill" [style.width.%]="(g.xp % 500) / 5"></div></div>
+          <span class="xp-num">{{ g.xp }} XP</span>
+        </div>
+      }
+      <div class="daily-btn" [class.done]="dailyChallenge().completed" (click)="!dailyChallenge().completed && completeDailyChallenge()" title="{{ dailyChallenge().title }}">
+        <span class="pulse-dot" *ngIf="!dailyChallenge().completed"></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+        {{ dailyChallenge().completed ? 'Défi ✓' : '+' + dailyChallenge().xp + ' XP' }}
+      </div>
+      <button type="button" class="btn-action ghost" (click)="exportToPdf()" [disabled]="isExportingPdf()" title="Exporter PDF">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      </button>
+      <button type="button" class="btn-action primary glow" (click)="generateLearningPlan()" [disabled]="learningPlanLoading()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+        {{ learningPlanLoading() ? 'Analyse...' : (learningPlan() ? 'Actualiser' : 'Générer Plan IA') }}
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT AREA -->
+  <main class="lh-main-content">
+
+    <div class="content-body" [class.loading]="loading()">
+      @if (loading()) {
+        <div class="loader-overlay">
+          <div class="spinner"></div>
+          <p>Synchronisation de votre parcours...</p>
+        </div>
+      }
+
+      <!-- DASHBOARD TAB -->
+      @if (activeTab() === 'DASHBOARD') {
+        <div class="bento-grid">
+
+          <!-- Readiness Box -->
+          <div class="bento-card col-span-1 glass-panel highlight">
+            <div class="bc-header">
+              <h3>Prêt pour le poste</h3>
+              <div class="icon-wrap blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+            </div>
+            <div class="bc-body center-all">
+              <div class="radial-progress">
+                <svg viewBox="0 0 36 36">
+                  <path class="bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path class="fill" [attr.stroke-dasharray]="(learningPlan()?.summary?.overall_readiness_pct || 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div class="value">
+                  <span class="num">{{ learningPlan()?.summary?.overall_readiness_pct || 0 }}</span>
+                  <span class="sym">%</span>
+                </div>
+              </div>
+              <div class="target-info mt-4 text-center">
+                <div class="role-lbl">Cible : <strong>{{ targetRole }}</strong></div>
+                <div class="date-lbl">Estimé prêt le : {{ learningPlan()?.meta?.estimated_ready_date | date:'MMMM yyyy' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="bento-card col-span-2 glass-panel">
+            <div class="bc-header">
+              <h3>Statistiques d'Apprentissage</h3>
+              <div class="icon-wrap purple"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-6M6 20V10M18 20V4"/></svg></div>
+            </div>
+            <div class="bc-body">
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <span class="s-label">En Cours</span>
+                  <span class="s-value text-primary">{{ formationsEnCoursCount() }}</span>
+                </div>
+                <div class="stat-item bg-accent">
+                  <span class="s-label text-white-50">Terminées</span>
+                  <span class="s-value text-white">{{ formationsTermineesCount() }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="s-label">Progression Globale</span>
+                  <span class="s-value">{{ overallProgressPct() }}%</span>
+                </div>
+                <div class="stat-item">
+                  <span class="s-label">Alertes Retard</span>
+                  <span class="s-value" [class.text-danger]="lateCount() > 0">{{ lateCount() }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gap Analysis Heatmap -->
+          <div class="bento-card col-span-2 glass-panel">
+            <div class="bc-header">
+              <h3>Analyse des Gaps (Tech & Soft)</h3>
+              <div class="icon-wrap orange"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></div>
+            </div>
+            <div class="bc-body">
+              @if (learningPlan()) {
+                <div class="gap-bars">
+                  @for (item of learningPlan()!.skill_gap_analysis.breakdown; track item.skill) {
+                    <div class="gap-row">
+                      <div class="gr-info">
+                        <span class="gr-name">{{ item.skill }} <span class="badge-micro" [class]="weakSkillBadgeClass(item.skill)">{{ weakSkillBadgeClass(item.skill) }}</span></span>
+                        <span class="gr-score">{{ item.current_level }}/{{ item.required_level }}</span>
+                      </div>
+                      <div class="gr-track">
+                        <div class="gr-target" [style.width.%]="(item.required_level / 10) * 100"></div>
+                        <div class="gr-fill" [style.width.%]="(item.current_level / 10) * 100" [class.danger]="item.current_level < item.required_level * 0.5"></div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="empty-state-sm">
+                  <p>Analyse IA requise pour afficher les gaps.</p>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Calendar Preview -->
+          <div class="bento-card col-span-1 glass-panel">
+            <div class="bc-header">
+              <h3>Prochaines Échéances</h3>
+              <div class="icon-wrap green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+            </div>
+            <div class="bc-body">
+              <div class="mini-calendar">
+                @for (f of formationsEnCoursCount() > 0 ? formations() : []; track f.id) {
+                  @if (f.statut === StatutFormation.EN_COURS && f.dateFin) {
+                    <div class="cal-item">
+                      <div class="cal-date">
+                        <span class="d">{{ f.dateFin | date:'dd' }}</span>
+                        <span class="m">{{ f.dateFin | date:'MMM' }}</span>
+                      </div>
+                      <div class="cal-info">
+                        <h4>{{ f.titre }}</h4>
+                        <span class="risk-badge" [ngClass]="deadlineRiskClass(f)">{{ deadlineRiskLabel(f) }}</span>
+                      </div>
+                    </div>
+                  }
+                }
+                @if (formationsEnCoursCount() === 0) {
+                  <p class="text-muted text-sm text-center py-4">Aucune formation en cours avec échéance.</p>
+                }
+              </div>
+            </div>
+          </div>
+
+        </div>
+      }
+
+      <!-- ROADMAP TAB -->
+      @if (activeTab() === 'ROADMAP') {
+        <div class="glass-panel p-6">
+          <div class="section-header mb-8">
+            <h2>Parcours Stratégique</h2>
+            <p>Une feuille de route détaillée générée par l'IA pour combler vos faiblesses techniques et comportementales.</p>
+          </div>
+
+          @if (learningPlan()) {
+            <div class="journey-map">
+              @for (phase of learningPlan()!.roadmap; track phase.phase; let i = $index) {
+                <div class="journey-node" [class.active]="phase.phase === 1" [class.completed]="i < currentRoadmapPhase()">
+                  <div class="node-marker">
+                    <div class="dot">
+                      @if (i < currentRoadmapPhase()) {
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      } @else {
+                        <span>{{ phase.phase }}</span>
+                      }
+                    </div>
+                    <div class="line"></div>
+                  </div>
+                  <div class="node-content glass-card">
+                    <div class="nc-header">
+                      <div>
+                        <div class="phase-badge">Phase {{ phase.phase }}</div>
+                        <h3>{{ phase.title }}</h3>
+                      </div>
+                      <div class="nc-meta-group">
+                        <div class="nc-meta">⏱ {{ phase.duration_weeks }} semaines</div>
+                        @if (i < currentRoadmapPhase()) {
+                          <span class="phase-status done">✅ Terminée</span>
+                        } @else if (phase.phase === 1 || i === currentRoadmapPhase()) {
+                          <span class="phase-status active">🔵 En cours</span>
+                        } @else {
+                          <span class="phase-status future">⏳ À venir</span>
+                        }
+                      </div>
+                    </div>
+                    @if (phase.goals) {
+                      <ul class="goals-list">
+                        @for (g of phase.goals; track g) {
+                          <li>{{ g }}</li>
+                        }
+                      </ul>
+                    }
+                    <div class="nc-skills">
+                      @for (s of phase.focus_skills; track s) {
+                        <span class="skill-tag" [class]="weakSkillBadgeClass(s)">{{ s }}</span>
+                      }
+                    </div>
+                    @if (phase.time_management_tips) {
+                      <div class="ai-tip-box mt-4">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        <span><strong>Conseil IA:</strong> {{ phase.time_management_tips }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-state-lg text-center">
+              <div class="es-icon">🗺️</div>
+              <h3>Roadmap non générée</h3>
+              <p>Cliquez sur "Générer mon Plan IA" en haut à droite pour construire votre parcours.</p>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- RECOMMANDATIONS TAB -->
+      @if (activeTab() === 'RECOMMANDATIONS') {
+        <div class="filters-row mb-6 glass-panel p-4 flex gap-4">
+          <div class="f-group">
+            <label>Compétence cible</label>
+            <select class="custom-select" [ngModel]="recoFilterSkill()" (ngModelChange)="recoFilterSkill.set($event)">
+              <option value="ALL">Toutes</option>
+              @for (s of recoUniqueSkills(); track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+          </div>
+          <div class="f-group">
+            <label>Priorité</label>
+            <select class="custom-select" [ngModel]="recoFilterPriority()" (ngModelChange)="recoFilterPriority.set($event)">
+              <option value="ALL">Toutes</option>
+              <option value="critical">Critique</option>
+              <option value="high">Haute</option>
+              <option value="medium">Moyenne</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="course-grid">
+          @for (formation of filteredRecoFormations; track formation.skill) {
+            @for (course of formation.courses; track course.id) {
+              <div class="premium-course-card">
+                <div class="pcc-glow"></div>
+                <div class="pcc-header">
+                  <div class="platform-logo" [ngClass]="platformIcon(course.platform)">{{ course.platform.charAt(0) }}</div>
+                  <span class="priority-badge" [ngClass]="formation.priority">{{ priorityLabel(formation.priority) }}</span>
+                </div>
+                <div class="pcc-body">
+                  <span class="target-skill-lbl">Cible: {{ formation.skill }}</span>
+                  <h3 class="course-title">{{ course.title }}</h3>
+                  <div class="meta-tags">
+                    <span class="tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> {{ course.duration_hours }}h</span>
+                    <span class="tag">{{ course.level }}</span>
+                  </div>
+                </div>
+                <div class="pcc-footer">
+                  <div class="ai-impact">🚀 +{{ courseReadinessGain(formation.skill, course) }}% Readiness</div>
+                  <button class="btn-primary-sm w-full mt-3" [disabled]="isCourseLoading(formation.skill, course)" (click)="startCoursePractice(formation.skill, course)">
+                    {{ isCourseLoading(formation.skill, course) ? 'Ajout...' : 'Ajouter au plan' }}
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- KANBAN TAB -->
+      @if (activeTab() === 'KANBAN') {
+        <div class="kanban-scroll-area">
+          <div class="kanban-board">
+            @for (column of kanbanColumns; track column.status) {
+              <div class="k-column glass-panel" (dragover)="allowDrop($event)" (drop)="onDrop($event, column.status)">
+                <div class="kc-header">
+                  <h4>{{ column.title }} <span class="count">{{ statusCount(column.status) }}</span></h4>
+                </div>
+
+                <div class="kc-cards" [class.drag-over]="draggedFormationId() !== null">
+                  @for (formation of formationsByStatusFiltered(column.status); track formation.id) {
+                    <div class="k-card" [class]="'status-' + (formation.statut | lowercase)" draggable="true" (dragstart)="onCardDragStart($event, formation)" (dragend)="onCardDragEnd()">
+
+                      <div class="k-card-header flex justify-between items-start">
+                        <div class="k-card-type">{{ formation.type }}</div>
+                        <button class="btn-delete-micro" (click)="deleteFormation(formation.id)" title="Supprimer">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                      </div>
+                      <div class="k-card-title">{{ formation.titre }}</div>
+
+                      <div class="k-progress-area mt-3">
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                          <span>Progression</span>
+                          <span>{{ formation.progression }}%</span>
+                        </div>
+                        <input type="range" class="custom-range" min="0" max="100" [value]="formation.progression" (change)="updateProgressionFromInput(formation, $any($event.target).value)" />
+                      </div>
+
+                      <div class="k-card-actions mt-4">
+                        <button class="btn-secondary-sm w-full" (click)="moveToNextStatus(formation)" [disabled]="!canMoveToNextStatus(formation) || isStatusActionLoading(formation.id)">
+                          Déplacer →
+                        </button>
+                      </div>
+
+                      @if (isMiniQuizEligible(formation)) {
+                        <button class="btn-primary-sm w-full mt-2" (click)="openMiniQuiz(formation)">Passer la Validation</button>
+                      }
+
+                      <!-- ADMIN REVIEW PREVIEW -->
+                      @if (canEditReviewNotes() && column.status === StatutFormation.EN_ATTENTE_VALIDATION) {
+                        <div class="admin-review-box mt-3">
+                          <label class="text-xs font-bold text-accent">Note Admin :</label>
+                          <textarea class="custom-textarea mt-1 w-full" rows="2" [ngModel]="getReviewDraft(formation.id).reviewNote" (ngModelChange)="updateReviewDraft(formation.id, 'reviewNote', $event)"></textarea>
+                          <button class="btn-primary-sm mt-1 w-full" (click)="saveReviewNotes(formation)">Sauvegarder & Valider</button>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- GAMIFICATION TAB -->
+      @if (activeTab() === 'GAMIFICATION') {
+        <div class="glass-panel p-6">
+          <div class="section-header mb-8">
+            <h2>Leaderboard & Gamification</h2>
+            <p>Comparez vos progrès avec vos pairs et débloquez des badges exclusifs.</p>
+          </div>
+
+            <div class="gamification-layout">
+              <!-- Leaderboard -->
+              <div class="leaderboard-box glass-card">
+                <h3 class="mb-4">🏆 Top Apprenants</h3>
+                @if (gamificationLoading()) {
+                  <div class="text-center text-muted py-4">Chargement...</div>
+                } @else {
+                  <div class="lb-list">
+                    @for (user of leaderboard(); track user.userId) {
+                      <div class="lb-item" [class.is-me]="user.userId === currentUserId">
+                        <div class="lb-rank">
+                          @if (user.rank === 1) { 🥇 }
+                          @else if (user.rank === 2) { 🥈 }
+                          @else if (user.rank === 3) { 🥉 }
+                          @else { #{{ user.rank }} }
+                        </div>
+                        <div class="lb-info">
+                          <div class="lb-name">{{ user.username }}{{ user.userId === currentUserId ? ' (Vous)' : '' }}</div>
+                          <div class="lb-lvl text-muted text-xs">Niveau {{ user.level }}</div>
+                        </div>
+                        <div class="lb-xp font-bold text-accent">{{ user.xp }} XP</div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+            <!-- Badges -->
+            <div class="badges-box glass-card">
+              <h3 class="mb-4">Mes Badges Récents</h3>
+              <div class="badges-grid">
+                <div class="badge-item earned">
+                  <div class="b-icon">🔥</div>
+                  <div class="b-name">Streak 7 Jours</div>
+                </div>
+                <div class="badge-item earned">
+                  <div class="b-icon">🎓</div>
+                  <div class="b-name">Premier Certif</div>
+                </div>
+                <div class="badge-item locked">
+                  <div class="b-icon">💻</div>
+                  <div class="b-name">Master Code</div>
+                  <div class="b-req">Néc. Niv 15</div>
+                </div>
+                <div class="badge-item locked">
+                  <div class="b-icon">🗣️</div>
+                  <div class="b-name">Soft Skills Pro</div>
+                  <div class="b-req">Valider 3 cours</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+    </div>
+  </main>
+
+  <!-- MINI QUIZ MODAL -->
+  @if (activeQuizFormation(); as formation) {
+    <div class="glass-modal-overlay" (click)="closeMiniQuiz()">
+      <div class="glass-modal-content" (click)="$event.stopPropagation()">
+        <button class="modal-close-btn" (click)="closeMiniQuiz()">×</button>
+
+        <div class="modal-header">
+          <div class="badge-accent mb-2">Processus de Certification</div>
+          <h2>Validation : {{ formation.titre }}</h2>
+        </div>
+
+        <div class="quiz-area mt-6">
+          @if (!formation.miniTestPassed) {
+            <div class="quiz-questions">
+              @for (question of miniQuizQuestions(formation); track question.id; let qIdx = $index) {
+                <div class="q-block glass-card mb-6 p-5">
+                  <h4 class="mb-4">Q{{ qIdx + 1 }}. {{ question.prompt }}</h4>
+                  <div class="q-opts flex flex-col gap-2">
+                    @for (option of question.options; track option; let oIdx = $index) {
+                      <label class="q-opt" [class.selected]="miniQuizAnswerAt(formation.id, qIdx) === oIdx">
+                        <input type="radio" [name]="'q-' + qIdx" (change)="setMiniQuizAnswer(formation.id, qIdx, oIdx)">
+                        <span class="custom-radio"></span>
+                        {{ option }}
+                      </label>
+                    }
+                  </div>
+                </div>
+              }
+
+      <!-- QUIZ RESULT STATE -->
+              @if (miniQuizResult()) {
+                <div class="quiz-result-panel" [class.passed]="miniQuizResult()!.passed" [class.failed]="!miniQuizResult()!.passed">
+                  <div class="qr-score">{{ miniQuizResult()!.score }}%</div>
+                  <div class="qr-label">{{ miniQuizResult()!.passed ? '🎉 Test Réussi !' : '❌ Test Échoué' }}</div>
+                  <p class="qr-detail">{{ miniQuizResult()!.correct }}/{{ miniQuizResult()!.total }} bonnes réponses · Score minimum: {{ miniQuizPassingScore }}%</p>
+                  @if (!miniQuizResult()!.passed) {
+                    <button class="btn-action primary mt-4" (click)="retryMiniQuiz(activeQuizFormation()!)">🔄 Réessayer le test</button>
+                  }
+                </div>
+              }
+
+              <button class="btn-action primary glow w-full py-3 text-lg" (click)="submitMiniQuiz(formation)" [disabled]="isMiniQuizSubmitting(formation.id)">
+                {{ isMiniQuizSubmitting(formation.id) ? 'Analyse des réponses...' : 'Soumettre le Test' }}
+              </button>
+            </div>
+          } @else {
+            <div class="success-state text-center py-8">
+              <div class="success-icon mb-4">✅</div>
+              <h3 class="text-xl font-bold text-success mb-2">Test Réussi !</h3>
+              <p class="text-muted mb-8">L'IA a validé vos connaissances pour ce module.</p>
+
+              <div class="cert-upload glass-card p-6 text-left">
+                <h4 class="mb-2">Preuve de Certification</h4>
+                <p class="text-sm text-muted mb-4">Téléversez le certificat officiel pour la validation finale admin.</p>
+
+                @if (!formation.certificateUrl) {
+                  <div class="dropzone-area">
+                    <input type="file" id="cert-file" (change)="onCertificateSelected($event, formation)" hidden>
+                    <label for="cert-file" class="dropzone-label border-2 border-dashed border-gray-400 rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent-10 transition">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--lh-primary)" stroke-width="2" class="mb-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                      <span class="font-bold text-accent">{{ isCertificateUploading(formation.id) ? 'Téléversement...' : 'Parcourir les fichiers' }}</span>
+                    </label>
+                  </div>
+                } @else {
+                  <div class="cert-ready bg-success-10 border border-success p-4 rounded-lg flex items-center justify-between">
+                    <span class="text-success font-bold flex items-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Certificat attaché</span>
+                    <button class="btn-action primary" (click)="validateCertificate(formation)">Envoyer à l'Admin</button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- TOAST NOTIFICATION -->
+  @if (toastMessage(); as toast) {
+    <div class="toast-bar" [class]="'toast-' + toast.type">
+      {{ toast.text }}
+    </div>
+  }
+</div>

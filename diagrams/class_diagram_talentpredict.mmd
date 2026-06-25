@@ -1,0 +1,86 @@
+classDiagram
+    direction LR
+
+    %% Diagram: évaluation des compétences par Admin et Employeur (sans candidat)
+    class User {
+        UUID id
+        String username
+        String email
+        Role role
+    }
+
+    class Admin {
+        String permissions
+    }
+
+    class Employer {
+        String companyName
+        String department
+    }
+
+    class Skill {
+        UUID id
+        String name
+        SkillKind kind
+        Integer level
+        String source
+    }
+
+    class SkillKind {
+        <<enumeration>>
+        SOFT
+        HARD
+    }
+
+    class Evaluation {
+        UUID id
+        EvaluationType type
+        Integer score
+        String comments
+        Boolean validated
+        LocalDateTime evaluatedAt
+    }
+
+    class EvaluationType {
+        <<enumeration>>
+        SOFT
+        HARD
+        MIXED
+    }
+
+    class Report {
+        UUID id
+        String title
+        String summary
+        LocalDateTime createdAt
+    }
+
+    class Notification {
+        UUID id
+        String title
+        String message
+        Boolean read
+        LocalDateTime sentAt
+    }
+
+    %% Héritage et rôles
+    User <|-- Admin
+    User <|-- Employer
+
+    %% Actions et associations
+    Admin "1" o-- "0..*" Evaluation : performs
+    Employer "1" o-- "0..*" Evaluation : performs
+
+    Evaluation "1" -- "1" Skill : measures
+    Evaluation "0..*" -- "0..*" Report : documents
+
+    Admin "0..*" -- "0..*" Report : authors
+    Employer "0..*" -- "0..*" Report : authors
+
+    Admin "0..*" -- "0..*" Notification : sends
+    Employer "0..*" -- "0..*" Notification : sends
+
+    Skill --> SkillKind
+    Evaluation --> EvaluationType
+
+    %% Note: diagramme centré sur les évaluateurs (Admin/Employeur) et les évaluations soft/hard.

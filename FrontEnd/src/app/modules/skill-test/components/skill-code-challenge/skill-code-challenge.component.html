@@ -1,0 +1,243 @@
+<div class="cc-wrap">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════ -->
+  <div class="cc-header">
+    <button type="button" class="back-btn" (click)="goBack()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Retour
+    </button>
+    <div class="header-title">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+      </svg>
+      <h1>Code Challenge</h1>
+    </div>
+    @if (challenge && !result) {
+      <div class="header-meta">
+        <div class="timer-badge" [class.warning]="timerWarning" [class.danger]="timerDanger">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          {{ timerMinutes }}:{{ timerSeconds }}
+        </div>
+        @if (hintsUsed > 0) {
+          <span class="hints-badge">💡 {{ hintsUsed }} indice(s)</span>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- ══ SKILL & LEVEL PICKER (shown when no challenge active or after result) ══ -->
+  @if (!challenge || result) {
+    <div class="picker-row">
+      <div class="picker-group">
+        <label class="picker-label">Compétence</label>
+        <div class="select-wrap">
+          <select [(ngModel)]="selectedSkill" class="picker-select" [disabled]="loading">
+            @if (techSkillNames.length > 0) {
+              @for (s of techSkillNames; track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            } @else {
+              <option [value]="selectedSkill">{{ selectedSkill }}</option>
+            }
+          </select>
+          <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="picker-group">
+        <label class="picker-label">Niveau</label>
+        <div class="level-pills">
+          @for (lv of levels; track lv) {
+            <button type="button" class="level-pill" [class.active]="selectedLevel === lv"
+                    [disabled]="loading" (click)="selectedLevel = lv">
+              {{ levelLabels[lv] }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <button type="button" class="btn reload-btn" [disabled]="loading" (click)="loadChallenge()">
+        @if (loading) {
+          <span class="spinner"></span> Génération…
+        } @else {
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          {{ challenge ? 'Nouveau challenge' : 'Lancer le challenge' }}
+        }
+      </button>
+    </div>
+  }
+
+  <!-- ══ LOADING STATE ════════════════════════════════════════════ -->
+  @if (loading) {
+    <div class="state-card">
+      <div class="big-spinner"></div>
+      <p class="state-title">Génération du challenge…</p>
+      <p class="state-sub">
+        L'IA crée un exercice adapté à votre niveau
+        <strong>{{ levelLabels[selectedLevel] }}</strong> en
+        <strong>{{ selectedSkill }}</strong>.
+      </p>
+    </div>
+  }
+
+  <!-- ══ CHALLENGE PANEL ══════════════════════════════════════════ -->
+  @if (challenge && !loading && !result) {
+    <div class="challenge-panel">
+
+      <!-- Meta badges -->
+      <div class="challenge-meta">
+        <span class="meta-badge skill-badge">{{ challenge.skill ?? selectedSkill }}</span>
+        <span class="meta-badge level-badge">{{ levelLabels[selectedLevel] }}</span>
+        @if (challenge.difficulty) {
+          <span class="meta-badge diff-badge">{{ challenge.difficulty }}</span>
+        }
+        <button type="button" class="change-inline-btn" (click)="changeSkill()">
+          Changer de skill ↗
+        </button>
+      </div>
+
+      <!-- Description -->
+      <div class="challenge-desc">
+        @if (challenge.title) {
+          <h2 class="desc-title">{{ challenge.title }}</h2>
+        }
+        <p class="desc-body">{{ challenge.description }}</p>
+        @if (challenge.expected_behavior) {
+          <div class="expected-box">
+            <span class="expected-label">Comportement attendu</span>
+            <p class="expected-text">{{ challenge.expected_behavior }}</p>
+          </div>
+        }
+      </div>
+
+      <!-- Code editor -->
+      <div class="editor-section">
+        <div class="editor-header">
+          <span class="editor-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+            </svg>
+            Votre solution
+          </span>
+          <span class="lang-tag">{{ challenge.skill ?? selectedSkill }}</span>
+        </div>
+
+
+
+        <textarea
+          class="code-editor"
+          rows="18"
+          [(ngModel)]="code"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          placeholder="Écrivez votre solution ici…"
+        ></textarea>
+      </div>
+
+      <!-- Action bar -->
+      <div class="action-bar">
+        <button type="button" class="btn hint-btn"
+                [disabled]="!challenge.hints?.length || hintsUsed >= challenge.hints.length"
+                (click)="useHint()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          Indice (−10 pts)
+        </button>
+
+        <button type="button" class="btn submit-btn"
+                [disabled]="submitting || !code.trim()"
+                (click)="submit()">
+          @if (submitting) {
+            <span class="spinner white"></span> Évaluation…
+          } @else {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Soumettre ma solution
+          }
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ══ RESULT PANEL ═════════════════════════════════════════════ -->
+  @if (result && !loading) {
+    <div class="result-panel">
+      <div class="result-icon" [class.pass]="result.passed" [class.fail]="!result.passed">
+        @if (result.passed) {
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        } @else {
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        }
+      </div>
+
+      <h2 class="result-title">{{ result.passed ? 'Bravo !' : 'Presque…' }}</h2>
+      <p class="result-sub">{{ result.feedback ?? (result.passed ? 'Excellent travail !' : 'Revoyez votre solution et réessayez.') }}</p>
+
+      <div class="score-grid">
+        @if (result.score !== undefined) {
+          <div class="score-card">
+            <span class="score-val">{{ result.score }}<small>/100</small></span>
+            <span class="score-lbl">Score</span>
+          </div>
+        }
+        @if (result.time_bonus !== undefined) {
+          <div class="score-card">
+            <span class="score-val">+{{ result.time_bonus }}</span>
+            <span class="score-lbl">Bonus temps</span>
+          </div>
+        }
+        @if (result.hint_penalty !== undefined) {
+          <div class="score-card">
+            <span class="score-val warn">−{{ result.hint_penalty }}</span>
+            <span class="score-lbl">Pénalité indices</span>
+          </div>
+        }
+        @if (result.final_score !== undefined) {
+          <div class="score-card highlight">
+            <span class="score-val">{{ result.final_score }}</span>
+            <span class="score-lbl">Score final</span>
+          </div>
+        }
+      </div>
+
+      @if (result.correct_solution) {
+        <div class="solution-box">
+          <p class="solution-label">Solution de référence</p>
+          <pre class="solution-code">{{ result.correct_solution }}</pre>
+        </div>
+      }
+
+      <div class="result-actions">
+        <button type="button" class="btn retry-btn" (click)="retry()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-4.96"/>
+          </svg>
+          Nouveau challenge
+        </button>
+        <button type="button" class="btn back-to-test-btn" (click)="goBack()">
+          Retour au test
+        </button>
+      </div>
+    </div>
+  }
+
+</div>

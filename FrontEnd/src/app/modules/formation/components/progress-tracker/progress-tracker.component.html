@@ -1,0 +1,25 @@
+<div class="progress-tracker" [attr.title]="summary() || 'Progression de la formation'">
+  <div class="progress-header">
+    <div class="progress-bar-container" 
+         role="progressbar" 
+         [attr.aria-valuenow]="progressPercentage()" 
+         aria-valuemin="0" 
+         aria-valuemax="100">
+      <div 
+        class="progress-bar-fill" 
+        [ngClass]="progressClass()"
+        [style.width.%]="progressPercentage()">
+      </div>
+    </div>
+    <span class="progress-text">{{ progressPercentage() }}%</span>
+  </div>
+
+  @if (improvementDelta() !== undefined) {
+    <div class="progress-footer">
+      <span class="delta-badge" [ngClass]="deltaClass()">
+        {{ deltaIcon() }} {{ Math.abs(improvementDelta()!) }}% 
+        <span class="delta-label">vs dernière évaluation</span>
+      </span>
+    </div>
+  }
+</div>

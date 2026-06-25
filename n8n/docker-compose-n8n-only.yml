@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # CV Text Extraction Service (Python)
+  # Called by n8n and Backend for PDF/DOCX parsing
+  # ============================================
+  cv-extractor:
+    build:
+      context: ../talentpredict-ai
+      dockerfile: Dockerfile.cv-extractor
+    container_name: talentpredict-cv-extractor
+    environment:
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "9000:9000"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talentpredict-net
+
+  # ============================================
+  # n8n Workflow Engine (SQLite embedded)
+  # Orchestrates: CV analysis, GitHub lookup, PCM scoring, LLM analysis
+  # ============================================
+  n8n:
+    build:
+      context: ./custom
+      dockerfile: Dockerfile
+    container_name: talentpredict-n8n
+    depends_on:
+      cv-extractor:
+        condition: service_healthy
+    environment:
+      # Database configuration - SQLite (built-in, no external database needed)
+      DB_TYPE: sqlite
+      # n8n Security
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-MinimumSixteenCharactersKey}
+      # n8n Web interface configuration
+      N8N_HOST: 0.0.0.0
+      N8N_PORT: 5678
+      # URL configuration for webhook access (accessible from host machine)
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_EDITOR_BASE_URL: http://localhost:5678/
+      # Allow n8n to call external services (Backend, CV Extractor)
+      # Network connectivity
+      NODE_ENV: production
+      TZ: UTC
+      # Tell n8n where to find CV Extractor (via Docker network)
+      CV_EXTRACTOR_URL: http://cv-extractor:9000
+    ports:
+      - "5678:5678"  # n8n Web UI + Webhooks
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talentpredict-net
+
+volumes:
+  n8n_data:
+    driver: local
+
+networks:
+  talentpredict-net:
+    driver: bridge
+

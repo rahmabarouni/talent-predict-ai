@@ -1,0 +1,50 @@
+# ============================================================
+# Root GitLab CI/CD — TalentPredict (Monorepo)
+# ============================================================
+
+stages:
+  - trigger
+
+# --------------------------------------------------
+# Backend child pipeline
+# --------------------------------------------------
+backend:
+  stage: trigger
+  trigger:
+    include: BackEnd/.gitlab-ci.yml
+    strategy: depend
+  rules:
+    - changes:
+        - BackEnd/**
+
+# --------------------------------------------------
+# Frontend child pipeline
+# --------------------------------------------------
+frontend:
+  stage: trigger
+  trigger:
+    include: FrontEnd/.gitlab-ci.yml
+    strategy: depend
+  rules:
+    - changes:
+        - FrontEnd/**
+
+# --------------------------------------------------
+# AI Service child pipeline
+# --------------------------------------------------
+ai:
+  stage: trigger
+  trigger:
+    include: talentpredict-ai/.gitlab-ci.yml
+    strategy: depend
+  rules:
+    - changes:
+        - talentpredict-ai/**
+n8n:
+  stage: trigger
+  trigger:
+    include: n8n/.gitlab-ci.yml
+    strategy: depend
+  rules:
+    - changes:
+        - n8n/**        

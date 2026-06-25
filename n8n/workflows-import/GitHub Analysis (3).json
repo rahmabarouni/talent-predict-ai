@@ -1,0 +1,297 @@
+{
+  "name": "GitHub Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "=llama3.2:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        464
+      ],
+      "id": "7c4f57e0-117a-496f-a404-54c662d4d631",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "zcrzpoNAhBR7F9af",
+          "name": "Ollama account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-analysis",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d8af1e54-e6a5-43c7-be1f-2d1cf5e0ace0",
+      "name": "Receive GitHub Username",
+      "webhookId": "bb3dea38-7a77-4270-9b3d-0b07837498b9"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\n    const username = (body.github_username ?? '').trim();\n\n    if (!username) {\n      // Return empty result immediately — no GitHub provided\n      return [{\n        json: {\n          github_score: 0,\n          repos: 0,\n          stars: 0,\n          forks: 0,\n          languages: [],\n          github_available: false\n        }\n      }];\n    }\n\n    return [{ json: { github_username: username } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1e52c152-df0f-47e0-86e5-14e3c7554e94",
+      "name": "Check Username"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "721b4633-067e-4d30-a8cf-be1b010ccdd6",
+              "leftValue": "={{ $json.github_available }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        80
+      ],
+      "id": "8cf100b8-ddb4-451c-982e-b655f9835889",
+      "name": "Has GitHub?"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/users/{{ $json.github_username }}/repos?per_page=100&sort=updated",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "TalentPredict"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        704,
+        192
+      ],
+      "id": "7f79d681-9597-4a79-94b9-921cc58f83fb",
+      "name": "Fetch GitHub Repos"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst repos = Array.isArray(data) ? data : [];\n\nif (repos.length === 0) {\n  return [{\n    json: {\n      github_score:     0,\n      repo_count:       0,\n      total_stars:      0,\n      total_forks:      0,\n      languages:        [],\n      recently_updated: 0,\n      has_descriptions: 0,\n      github_available: true\n    }\n  }];\n}\n\nconst repoCount       = repos.length;\nconst totalStars      = repos.reduce((s, r) => s + (r.stargazers_count ?? 0), 0);\nconst totalForks      = repos.reduce((s, r) => s + (r.forks_count      ?? 0), 0);\nconst recentlyUpdated = repos.filter(r =>\n  new Date(r.updated_at) > new Date(Date.now() - 90*24*60*60*1000)\n).length;\nconst hasDescriptions = repos.filter(r =>\n  r.description && r.description.trim() !== ''\n).length;\n\n// Language diversity → curiosity proxy\nconst langMap = {};\nfor (const r of repos) {\n  if (r.language) langMap[r.language] = (langMap[r.language] ?? 0) + 1;\n}\nconst languages = Object.entries(langMap)\n  .sort((a, b) => b[1] - a[1])\n  .slice(0, 5)\n  .map(([lang]) => lang);\n\n// Score: repos=40%, stars=40%, forks=20% — capped at 100\nconst repoScore    = Math.min((repoCount  / 20) * 40, 40);\nconst starScore    = Math.min((totalStars / 50) * 40, 40);\nconst forkScore    = Math.min((totalForks / 20) * 20, 20);\nconst github_score = Math.round(repoScore + starScore + forkScore);\n\nreturn [{\n  json: {\n    github_score,\n    repo_count:       repoCount,\n    total_stars:      totalStars,\n    total_forks:      totalForks,\n    languages,\n    recently_updated: recentlyUpdated,\n    has_descriptions: hasDescriptions,\n    github_available: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        272
+      ],
+      "id": "9518bb1b-bdef-44fe-af37-8f350edf0625",
+      "name": "Compute GitHub Score"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an HR analyst specialized in soft skills evaluation.\n\nAnalyze this GitHub profile data and evaluate ONLY the soft skills\nthat GitHub activity can objectively reveal.\n\nRules:\n- Scores must be 0 to 100 (not 0 to 10)\n- Only score: curiosity, collaboration, ownership, consistency\n- Do NOT score communication or discipline — GitHub cannot measure those\n- Base every score on the actual numbers provided\n- Return ONLY raw JSON, no markdown, no explanation, no code blocks\n\n{\n  \"soft_skills\": {\n    \"curiosity\":     { \"score\": <0-100>, \"evidence\": \"<based on language diversity and repo variety>\" },\n    \"collaboration\": { \"score\": <0-100>, \"evidence\": \"<based on forks and open source activity>\" },\n    \"ownership\":     { \"score\": <0-100>, \"evidence\": \"<based on maintained repos and descriptions>\" },\n    \"consistency\":   { \"score\": <0-100>, \"evidence\": \"<based on recently updated repos>\" }\n  },\n  \"github_score\": <copy exact value from input github_score field>,\n  \"summary\": \"<2 sentence professional summary based only on GitHub activity>\"\n}\n\nGitHub data:\n{{ $json }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1312,
+        256
+      ],
+      "id": "48215a17-3214-474b-ab37-86ae5b91c43c",
+      "name": "Analyze GitHub Soft Skills"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.text\n            ?? $input.first().json.response\n            ?? $input.first().json.output\n            ?? '';\n\nlet parsed;\ntry {\n  const clean = raw.replace(/```json/g, '').replace(/```/g, '').trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  // Safe fallback — never crash the pipeline\n  return [{\n    json: {\n      soft_skills: {\n        curiosity:     { score: 0, evidence: 'Parse error' },\n        collaboration: { score: 0, evidence: 'Parse error' },\n        ownership:     { score: 0, evidence: 'Parse error' },\n        consistency:   { score: 0, evidence: 'Parse error' }\n      },\n      github_score:     $('Compute GitHub Score').first().json.github_score ?? 0,\n      languages:        $('Compute GitHub Score').first().json.languages    ?? [],\n      repo_count:       $('Compute GitHub Score').first().json.repo_count   ?? 0,\n      summary:          '',\n      github_available: true\n    }\n  }];\n}\n\n// Guarantee every field exists — Master Agent must never receive null\nconst skills = ['curiosity', 'collaboration', 'ownership', 'consistency'];\nparsed.soft_skills = parsed.soft_skills ?? {};\nfor (const s of skills) {\n  parsed.soft_skills[s]        = parsed.soft_skills[s]        ?? {};\n  parsed.soft_skills[s].score  = parsed.soft_skills[s].score  ?? 0;\n  parsed.soft_skills[s].evidence = parsed.soft_skills[s].evidence ?? '';\n}\n\n// Always carry forward numeric fields from NODE 5\nparsed.github_score     = $('Compute GitHub Score').first().json.github_score ?? 0;\nparsed.languages        = $('Compute GitHub Score').first().json.languages    ?? [];\nparsed.repo_count       = $('Compute GitHub Score').first().json.repo_count   ?? 0;\nparsed.github_available = true;\n\nreturn [{ json: parsed }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        256
+      ],
+      "id": "60c84109-464c-46fa-827d-7aff9f34c74a",
+      "name": "Parse Ollama Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1968,
+        240
+      ],
+      "id": "8e6dcf2d-9cb8-43d9-b9f3-9f3c1cbad23e",
+      "name": "has-github branch"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1952,
+        -16
+      ],
+      "id": "0e078225-82b4-432e-bcf4-2416eecb43d0",
+      "name": "no-github branch"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze GitHub Soft Skills",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive GitHub Username": {
+      "main": [
+        [
+          {
+            "node": "Check Username",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Username": {
+      "main": [
+        [
+          {
+            "node": "Has GitHub?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has GitHub?": {
+      "main": [
+        [
+          {
+            "node": "no-github branch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch GitHub Repos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GitHub Repos": {
+      "main": [
+        [
+          {
+            "node": "Compute GitHub Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute GitHub Score": {
+      "main": [
+        [
+          {
+            "node": "Analyze GitHub Soft Skills",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze GitHub Soft Skills": {
+      "main": [
+        [
+          {
+            "node": "Parse Ollama Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Ollama Response": {
+      "main": [
+        [
+          {
+            "node": "has-github branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0996f684-6095-4aec-9642-04a82d3691c9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7d0b45276ce73f9390c4f4d9b25fd008d46255f2b94b6c10d52c42c480f14350"
+  },
+  "id": "bM0mgiEvbHqrkTrK",
+  "tags": []
+}

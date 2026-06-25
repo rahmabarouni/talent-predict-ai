@@ -1,0 +1,391 @@
+<div class="intake-wrap">
+
+  <!-- ══ HEADER ═════════════════════════════════════════════════════════ -->
+  <div class="intake-hero">
+    <div class="hero-icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    </div>
+    <div class="hero-text">
+      <h1>Mes Compétences Techniques</h1>
+      <p class="hero-sub">Analysez votre profil en profondeur — GitHub, LinkedIn, portfolio et CV — pour générer un test adaptatif précis et obtenir votre rapport PDF complet.</p>
+    </div>
+  </div>
+
+  <!-- ══ STEP TRACKER ═══════════════════════════════════════════════════ -->
+  <div class="step-tracker">
+    <div class="step" [class.active]="step === 'input'" [class.done]="step !== 'input'">
+      <div class="step-num">1</div>
+      <span>Profil & Sources</span>
+    </div>
+    <div class="step-line" [class.done]="step !== 'input'"></div>
+    <div class="step" [class.active]="step === 'analyzing'" [class.done]="step === 'done'">
+      <div class="step-num">2</div>
+      <span>Analyse IA</span>
+    </div>
+    <div class="step-line" [class.done]="step === 'done'"></div>
+    <div class="step" [class.active]="step === 'done'">
+      <div class="step-num">3</div>
+      <span>Test Adaptatif</span>
+    </div>
+  </div>
+
+  <!-- ══ STEP 1: INPUT ══════════════════════════════════════════════════ -->
+  @if (step === 'input') {
+  <form [formGroup]="form" (ngSubmit)="analyzeAndLaunch()" class="intake-form">
+
+    <!-- GitHub URL (Required) -->
+    <div class="field-card required-field">
+      <div class="field-header">
+        <div class="field-icon github-bg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+        </div>
+        <div>
+          <label class="field-label">Profil GitHub <span class="required-star">*</span></label>
+          <p class="field-hint">L'IA analysera vos dépôts pour détecter vos vraies compétences.</p>
+        </div>
+      </div>
+      <input
+        id="githubUrl"
+        type="url"
+        class="text-input"
+        formControlName="githubUrl"
+        placeholder="https://github.com/votre-username"
+      />
+      @if (form.get('githubUrl')?.invalid && form.get('githubUrl')?.touched) {
+        <p class="field-error">Ce champ est requis pour l'analyse.</p>
+      }
+    </div>
+
+    <!-- LinkedIn URL (Optional) -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-icon linkedin-bg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/>
+            <rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+          </svg>
+        </div>
+        <div>
+          <label class="field-label">Profil LinkedIn <span class="optional-tag">optionnel</span></label>
+          <p class="field-hint">URL de votre profil LinkedIn pour enrichir votre analyse.</p>
+        </div>
+      </div>
+      <input
+        id="linkedinUrl"
+        type="url"
+        class="text-input"
+        formControlName="linkedinUrl"
+        placeholder="https://linkedin.com/in/votre-profil"
+      />
+    </div>
+
+    <!-- Portfolio URL (Optional) -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-icon portfolio-bg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
+        <div>
+          <label class="field-label">Portfolio / Site web <span class="optional-tag">optionnel</span></label>
+          <p class="field-hint">Lien vers votre portfolio personnel ou site de démonstration.</p>
+        </div>
+      </div>
+      <input
+        id="portfolioUrl"
+        type="url"
+        class="text-input"
+        formControlName="portfolioUrl"
+        placeholder="https://mon-portfolio.com"
+      />
+    </div>
+
+    <!-- CV Upload -->
+    <div class="field-card">
+      <div class="field-header">
+        <div class="field-icon cv-bg">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <div>
+          <label class="field-label">CV / Curriculum Vitae <span class="optional-tag">optionnel</span></label>
+          <p class="field-hint">PDF ou TXT — max 5 Mo. Enrichit la détection de vos compétences.</p>
+        </div>
+      </div>
+
+      @if (!selectedFile) {
+        <label class="file-drop-zone" for="cvFile">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polyline points="16 16 12 12 8 16"/>
+            <line x1="12" y1="12" x2="12" y2="21"/>
+            <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+          </svg>
+          <span>Cliquez ou glissez votre fichier ici</span>
+          <span class="file-hint">PDF ou TXT · Max 5 Mo</span>
+          <input id="cvFile" type="file" accept=".pdf,.txt" (change)="onFileSelected($event)" hidden />
+        </label>
+      } @else {
+        <div class="file-selected">
+          <div class="file-info">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span>{{ selectedFile.name }}</span>
+            @if (isExtracting) { <span class="extract-badge">Extraction…</span> }
+            @if (!isExtracting && extractedCvText) { <span class="extract-ok">✓ Extrait</span> }
+          </div>
+          <button type="button" class="remove-file-btn" (click)="clearFile()">✕</button>
+        </div>
+        @if (extractionError) {
+          <p class="field-error">{{ extractionError }}</p>
+        }
+      }
+
+      @if (fileError) {
+        <p class="field-error">{{ fileError }}</p>
+      }
+    </div>
+
+    <!-- Existing skills preview -->
+    @if (existingSkills.length > 0) {
+      <div class="skills-preview">
+        <p class="skills-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          Compétences actuelles dans votre profil ({{ existingSkills.length }})
+        </p>
+        <div class="skills-chips">
+          @for (skill of existingSkills; track skill) {
+            <span class="skill-chip">{{ skill }}</span>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Analyze Button -->
+    <button
+      id="btn-analyze-launch"
+      type="submit"
+      class="btn-primary-full"
+      [disabled]="form.invalid || isExtracting"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      Analyser mon profil &amp; lancer le test
+    </button>
+
+    @if (analyzeError) {
+      <div class="error-banner">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ analyzeError }}
+      </div>
+    }
+  </form>
+  }
+
+  <!-- ══ STEP 2: ANALYZING ══════════════════════════════════════════════ -->
+  @if (step === 'analyzing') {
+  <div class="analyzing-state">
+    <div class="pulse-ring">
+      <div class="pulse-dot"></div>
+    </div>
+    <h2>Analyse de votre profil en cours…</h2>
+    <p>L'IA examine vos dépôts GitHub, croise vos compétences déclarées et prépare un test personnalisé.</p>
+    <div class="analysis-steps">
+      <div class="a-step active">
+        <span class="a-dot"></span> Scanning GitHub repositories
+      </div>
+      <div class="a-step">
+        <span class="a-dot"></span> Détection des compétences réelles
+      </div>
+      <div class="a-step">
+        <span class="a-dot"></span> Calcul des gaps et du niveau
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- ══ STEP 3: DONE — SHOW RESULTS & LAUNCH ══════════════════════════ -->
+  @if (step === 'done' && aiAnalysis) {
+  <div class="done-state github-analyzer" style="padding: 0; max-width: none; border: none; background: transparent;">
+    @let a = aiAnalysis;
+
+    @if (a.cv_warning) {
+      <div class="warning-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>{{ a.cv_warning }}</span>
+      </div>
+    }
+
+    <!-- Score Summary Cards -->
+    <div class="score-cards">
+      <div class="score-card">
+        <span class="score-label">Score d'expérience</span>
+        <span class="score-value primary">{{ a.experience_score }}<small>/100</small></span>
+      </div>
+      <div class="score-card">
+        <span class="score-label">Match emploi</span>
+        <span class="score-value accent">{{ (a.job_match && a.job_match.score) || 0 }}<small>/100</small></span>
+      </div>
+      <div class="score-card">
+        <span class="score-label">Repos analysés</span>
+        <span class="score-value neutral">{{ a.repositories_analyzed }}</span>
+      </div>
+      <div class="score-card">
+        <span class="score-label">Compétences</span>
+        <span class="score-value neutral">{{ (a.skills && a.skills.length) || 0 }}</span>
+      </div>
+    </div>
+
+    <!-- Sources used -->
+    @if (a.data_sources && a.data_sources.length > 0) {
+      <div class="sources-used">
+        <span class="sources-label">Sources analysées :</span>
+        @for (src of a.data_sources; track src) {
+          <span class="source-chip" [style.background]="getSourceColor(src)">{{ getSourceLabel(src) }}</span>
+        }
+      </div>
+    }
+
+    <!-- Skills List -->
+    @if (a.skills && a.skills.length > 0) {
+      <div class="analysis-results">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <h3>Compétences détectées</h3>
+          <span class="results-count">{{ a.skills.length }}</span>
+        </div>
+        <div class="skills-list">
+          @for (skill of a.skills; track skill.name) {
+            <div class="skill-item">
+              <div class="skill-header-row">
+                <div class="skill-info">
+                  <span class="skill-name">{{ skill.name }}</span>
+                  <span class="skill-level-badge" [style.background]="getLevelColor(skill.level)">{{ skill.level }}</span>
+                </div>
+                <div class="skill-right">
+                  @if (skill.sources && skill.sources.length > 0) {
+                    <div class="skill-sources">
+                      @for (source of skill.sources; track source) {
+                        <span class="source-badge" [style.background]="getSourceColor(source)" [title]="'Détecté via ' + source">
+                          {{ getSourceLabel(source) }}
+                        </span>
+                      }
+                    </div>
+                  }
+                  <span class="skill-score">{{ skill.score }}</span>
+                </div>
+              </div>
+              <div class="skill-bar-wrapper">
+                <div class="skill-bar" [style.width]="getLevelWidth(skill.score)" [style.background]="getLevelColor(skill.level)"></div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Summary -->
+    @if (a.summary) {
+      <div class="summary-card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <h3>Résumé</h3>
+        </div>
+        <p class="summary-text">{{ a.summary }}</p>
+      </div>
+    }
+
+    <!-- LinkedIn Analysis -->
+    @if (a.linkedin_analysis) {
+      <div class="linkedin-card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+          <h3>Analyse LinkedIn</h3>
+        </div>
+        <pre class="linkedin-analysis-text" style="font-size: 0.813rem; line-height: 1.5; color: var(--text-primary, #1e293b); margin: 0; white-space: pre-wrap; font-family: inherit;">{{ a.linkedin_analysis }}</pre>
+      </div>
+    }
+
+    <!-- Job Match Details -->
+    @if (a.job_match) {
+      <div class="job-match-card">
+        <div class="card-header">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          <h3>Correspondance Emploi</h3>
+        </div>
+        @if (a.job_match.profile) {
+          <p class="job-profile"><strong>Profil :</strong> {{ a.job_match.profile }}</p>
+        }
+        @if (a.job_match.matched_skills && a.job_match.matched_skills.length > 0) {
+          <div class="match-section">
+            <span class="match-label success">Compétences correspondantes</span>
+            <div class="tag-list">
+              @for (skill of a.job_match.matched_skills; track skill) {
+                <span class="tag tag-success">{{ skill }}</span>
+              }
+            </div>
+          </div>
+        }
+        @if (a.job_match.missing_skills && a.job_match.missing_skills.length > 0) {
+          <div class="match-section">
+            <span class="match-label warning">Compétences manquantes</span>
+            <div class="tag-list">
+              @for (skill of a.job_match.missing_skills; track skill) {
+                <span class="tag tag-warning">{{ skill }}</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ===== CTA: Take the Tech Test ===== -->
+    <div class="take-test-cta" style="margin-bottom: 2rem;">
+      <div class="cta-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </div>
+      <div class="cta-body">
+        <h3>Prêt à valider vos compétences ?</h3>
+        <p>Un test technique adaptatif a été généré selon vos {{ a.skills.length }} compétences analysées. Les questions s'adaptent à votre niveau réel.</p>
+      </div>
+      <button class="cta-btn" (click)="launchTest()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        Passer le test technique
+      </button>
+    </div>
+
+    <!-- Actions (Reset) -->
+    <div class="done-actions">
+      <button type="button" class="btn-secondary" (click)="resetAnalysis()">
+        Changer les sources / Recommencer l'analyse
+      </button>
+    </div>
+  </div>
+  }
+
+</div>

@@ -1,0 +1,397 @@
+<div class="security-page">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <button type="button" class="btn-back" (click)="goBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+        <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+      </svg>
+      Retour au profil
+    </button>
+    <div class="header-text">
+      <h1>🔒 Sécurité & Confidentialité</h1>
+      <p>Gérez la sécurité de votre compte, vos sessions actives et vos paramètres RGPD.</p>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="loading-box">
+    <div class="loader"></div>
+    <span>Chargement des paramètres de sécurité...</span>
+  </div>
+  }
+
+  @if (!loading) {
+
+  <!-- ===== SECURITY SCORE ===== -->
+  <div class="score-card">
+    <div class="score-left">
+      <div class="score-ring-wrap">
+        <svg viewBox="0 0 80 80" class="score-ring">
+          <circle cx="40" cy="40" r="32" class="score-ring-bg" />
+          <circle cx="40" cy="40" r="32" class="score-ring-fill"
+            [style.stroke]="securityScore >= 80 ? '#10b981' : securityScore >= 50 ? '#f59e0b' : '#ef4444'"
+            [style.stroke-dasharray]="201"
+            [style.stroke-dashoffset]="201 - (securityScore / 100) * 201" />
+        </svg>
+        <div class="score-ring-label">{{ securityScore }}<span>%</span></div>
+      </div>
+      <div class="score-info">
+        <h3>Niveau de sécurité</h3>
+        <p class="score-label"
+          [class.score-low]="securityScore < 50"
+          [class.score-mid]="securityScore >= 50 && securityScore < 80"
+          [class.score-high]="securityScore >= 80">
+          @if (securityScore >= 80) { 🛡️ Excellent }
+          @else if (securityScore >= 50) { ⚠️ Moyen }
+          @else { 🚨 Faible }
+        </p>
+      </div>
+    </div>
+    <div class="score-checklist">
+      @for (item of securityItems; track item.label) {
+      <div class="score-item" [class.done]="item.done">
+        <span class="score-icon">{{ item.done ? '✅' : '❌' }}</span>
+        <span class="score-item-label">{{ item.label }}</span>
+        @if (!item.done && item.action) {
+        <button type="button" class="btn-score-action" (click)="setTab('security')">{{ item.action }}</button>
+        }
+      </div>
+      }
+    </div>
+  </div>
+
+  <!-- ===== TAB NAV ===== -->
+  <div class="tab-nav">
+    <button type="button" class="tab-btn" [class.active]="activeTab === 'security'" (click)="setTab('security')">
+      🔐 Sécurité
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab === 'sessions'" (click)="setTab('sessions')">
+      💻 Sessions
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab === 'privacy'" (click)="setTab('privacy')">
+      🔕 Confidentialité
+    </button>
+    <button type="button" class="tab-btn" [class.active]="activeTab === 'gdpr'" (click)="setTab('gdpr')">
+      🛡️ RGPD
+    </button>
+  </div>
+
+  <!-- ===== SECURITY TAB ===== -->
+  @if (activeTab === 'security' && dashboard) {
+
+  <div class="panel-grid">
+
+    <!-- Email verification -->
+    <div class="status-card" [class.ok]="dashboard.emailVerified" [class.warn]="!dashboard.emailVerified">
+      <div class="status-card-header">
+        <span class="status-icon">{{ dashboard.emailVerified ? '✅' : '⚠️' }}</span>
+        <h3>Vérification e-mail</h3>
+        <span class="badge" [class]="getStatusBadgeClass(dashboard.emailVerified)">
+          {{ dashboard.emailVerified ? 'Vérifié' : 'Non vérifié' }}
+        </span>
+      </div>
+      <p>{{ dashboard.emailVerified ? 'Votre adresse email est vérifiée.' : 'Vérifiez votre adresse email pour sécuriser votre compte.' }}</p>
+      @if (!dashboard.emailVerified) {
+      <button type="button" class="btn-secondary" (click)="resendVerificationEmail()" [disabled]="processing">
+        Renvoyer l'e-mail de vérification
+      </button>
+      }
+    </div>
+
+
+
+  </div>
+
+  <!-- Password change section -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>🔑 Mot de passe</h2>
+      <button type="button" class="btn-secondary" (click)="showPasswordChange = !showPasswordChange">
+        {{ showPasswordChange ? 'Annuler' : 'Modifier le mot de passe' }}
+      </button>
+    </div>
+
+    @if (!showPasswordChange) {
+    <p class="panel-desc">Modifiez votre mot de passe régulièrement pour sécuriser votre compte.</p>
+    }
+
+    @if (showPasswordChange) {
+    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="password-form">
+      <div class="form-group">
+        <label>Mot de passe actuel</label>
+        <input type="password" formControlName="currentPassword" placeholder="Entrez votre mot de passe actuel" autocomplete="current-password" />
+      </div>
+      <div class="form-group">
+        <label>Nouveau mot de passe</label>
+        <input type="password" formControlName="newPassword" placeholder="Minimum 8 caractères" autocomplete="new-password"
+          (input)="onNewPasswordChange()" />
+        @if (passwordStrength > 0) {
+        <div class="strength-bar">
+          <div class="strength-fill" [style.width.%]="passwordStrength * 25"
+            [class.weak]="passwordStrength <= 1"
+            [class.medium]="passwordStrength === 2 || passwordStrength === 3"
+            [class.strong]="passwordStrength === 4"></div>
+        </div>
+        <span class="strength-label"
+          [class.weak]="passwordStrength <= 1"
+          [class.medium]="passwordStrength === 2 || passwordStrength === 3"
+          [class.strong]="passwordStrength === 4">{{ passwordStrengthLabel }}</span>
+        }
+      </div>
+      <div class="form-group">
+        <label>Confirmer le mot de passe</label>
+        <input type="password" formControlName="confirmPassword" placeholder="Répétez le nouveau mot de passe" autocomplete="new-password" />
+      </div>
+      <button type="submit" class="btn-primary" [disabled]="processing || passwordForm.invalid">
+        @if (processing) { <span class="btn-spinner-sm"></span> } Modifier le mot de passe
+      </button>
+    </form>
+    }
+  </div>
+
+  <!-- Login history -->
+  <div class="panel">
+    <h2>📋 Historique de connexion</h2>
+    @if (!dashboard.loginHistory.length) {
+    <p class="empty-msg">Aucun événement de sécurité récent.</p>
+    }
+    <div class="event-list">
+      @for (event of dashboard.loginHistory; track event.createdAt + event.eventType) {
+      <div class="event-item">
+        <div class="event-info">
+          <span class="badge" [class]="getEventBadgeClass(event.eventType)">
+            {{ translateEventType(event.eventType) }}
+          </span>
+          <p class="event-meta">
+            {{ formatDate(event.createdAt) }} &bull;
+            IP: {{ maskIp(event.ipAddress) }} &bull;
+            {{ getDeviceLabel(event.deviceId) }}
+          </p>
+          @if (event.details) { <p class="event-details">{{ event.details }}</p> }
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- ===== SESSIONS TAB ===== -->
+  @if (activeTab === 'sessions' && dashboard) {
+  <div class="panel">
+    <div class="panel-header">
+      <h2>💻 Sessions actives</h2>
+      <button type="button" class="btn-danger-outline" (click)="revokeAllSessions()" [disabled]="processing">
+        Révoquer toutes les sessions
+      </button>
+    </div>
+
+    @if (!dashboard.activeSessions.length) {
+    <div class="empty-state">
+      <p>Aucune session active enregistrée.</p>
+      <span class="empty-hint">Les sessions sont créées à chaque connexion.</span>
+    </div>
+    }
+
+    <div class="session-list">
+      @for (session of dashboard.activeSessions; track session.id) {
+      <div class="session-item">
+        <div class="session-icon">{{ getDeviceLabel(session.deviceId) }}</div>
+        <div class="session-info">
+          <strong>{{ session.deviceId || 'Appareil inconnu' }}</strong>
+          <p>Créée : {{ formatDate(session.createdAt) }}</p>
+          <p>Expire : {{ formatDate(session.expiresAt) }}</p>
+        </div>
+        <div class="session-actions">
+          <span class="badge badge-success">Active</span>
+          <button type="button" class="btn-danger-outline btn-sm" (click)="revokeSession(session.id)" [disabled]="processing">
+            Révoquer
+          </button>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- ===== PRIVACY TAB ===== -->
+  @if (activeTab === 'privacy' && privacySettings) {
+  <div class="panel">
+    <h2>🔕 Préférences de confidentialité</h2>
+    <form [formGroup]="privacyForm" (ngSubmit)="savePrivacySettings()" class="privacy-form">
+
+      <p class="section-subtitle">Visibilité et données</p>
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Profil visible aux recruteurs</span>
+          <span class="toggle-desc">Les recruteurs et administrateurs peuvent consulter votre profil complet.</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="profileVisibilityConsent" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Recevoir les e-mails marketing</span>
+          <span class="toggle-desc">Newsletters, conseils carrière et nouvelles fonctionnalités.</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="marketingEmailsConsent" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Autoriser l'analyse d'usage</span>
+          <span class="toggle-desc">Aide à améliorer la plateforme via des données anonymisées.</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="analyticsConsent" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Consentement au traitement des données</span>
+          <span class="toggle-desc">Requis pour le fonctionnement de la plateforme (RGPD Art. 6).</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="dataProcessingConsent" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <p class="section-subtitle">Alertes de sécurité</p>
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Nouvelle connexion depuis un appareil inconnu</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="notifNewLogin" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Mot de passe modifié</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="notifPasswordChange" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Demande d'export de données</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="notifExportRequest" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-item">
+        <div class="toggle-info">
+          <span class="toggle-label">Un administrateur a consulté mon profil</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" formControlName="notifAdminView" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="form-group retention-group">
+        <label>Durée de rétention des données (jours)</label>
+        <input type="number" formControlName="dataRetentionDays" min="30" max="3650" class="retention-input" />
+        <span class="field-hint">Entre 30 et 3650 jours (10 ans max)</span>
+      </div>
+
+      <p class="hint">Dernière mise à jour : {{ formatDateShort(privacySettings.consentUpdatedAt) }}</p>
+
+      <div class="form-actions-row">
+        <button type="submit" class="btn-primary" [disabled]="processing || privacyForm.invalid">
+          @if (processing) { <span class="btn-spinner-sm"></span> } Sauvegarder mes préférences
+        </button>
+        <button type="button" class="btn-secondary" (click)="applyRetention()" [disabled]="processing">
+          Appliquer la rétention
+        </button>
+      </div>
+    </form>
+  </div>
+  }
+
+  <!-- ===== GDPR TAB ===== -->
+  @if (activeTab === 'gdpr' && privacySettings) {
+  <div class="panel">
+    <h2>🛡️ Outils RGPD</h2>
+    <p class="panel-desc">Téléchargez vos données, gérez votre consentement ou supprimez votre compte.</p>
+
+    <!-- Export -->
+    <div class="gdpr-section">
+      <h3>📦 Exporter mes données</h3>
+      <p>Téléchargez une copie complète de vos données personnelles.</p>
+      <div class="export-row">
+        <div class="format-choice">
+          <label class="format-option" [class.selected]="exportFormat === 'json'">
+            <input type="radio" [(ngModel)]="exportFormat" value="json" name="exportFormat" />
+            📄 JSON
+          </label>
+          <label class="format-option" [class.selected]="exportFormat === 'pdf'">
+            <input type="radio" [(ngModel)]="exportFormat" value="pdf" name="exportFormat" />
+            📋 PDF
+          </label>
+        </div>
+        <button type="button" class="btn-secondary" (click)="exportData()" [disabled]="processing">
+          Télécharger ({{ exportFormat.toUpperCase() }})
+        </button>
+      </div>
+    </div>
+
+    <!-- Deletion request -->
+    <div class="gdpr-section">
+      <h3>🗑️ Suppression du compte</h3>
+
+      @if (deletionCountdownDays !== null) {
+      <div class="deletion-countdown">
+        <span class="countdown-icon">⏳</span>
+        <div>
+          <p><strong>Suppression programmée dans {{ deletionCountdownDays }} jours</strong></p>
+          <p class="hint">Votre compte sera définitivement supprimé. Contactez le support pour annuler.</p>
+        </div>
+      </div>
+      } @else {
+      <p>Demandez la suppression de votre compte. Un délai de 28 jours s'applique avant suppression définitive.</p>
+      <button type="button" class="btn-warning" (click)="requestDeletion()" [disabled]="processing">
+        Demander la suppression
+      </button>
+      }
+
+      <div class="danger-zone">
+        <h4>⚠️ Anonymisation immédiate</h4>
+        <p>Cette action est irréversible. Entrez la phrase suivante pour confirmer :</p>
+        <code class="confirm-phrase">SUPPRIMER MON COMPTE</code>
+        <form [formGroup]="deleteForm" (ngSubmit)="deleteAccount()" class="delete-form">
+          <input id="confirmPhrase" type="text" formControlName="confirmPhrase"
+            placeholder="SUPPRIMER MON COMPTE" autocomplete="off" />
+          <button type="submit" class="btn-danger" [disabled]="processing || deleteForm.invalid">
+            Anonymiser définitivement mon compte
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  }
+
+  }<!-- end !loading -->
+
+</div>

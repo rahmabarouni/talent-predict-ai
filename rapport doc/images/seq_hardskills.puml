@@ -1,0 +1,81 @@
+@startuml seq_hardskills
+skinparam style strictuml
+skinparam maxMessageSize 150
+skinparam defaultFontName Arial
+skinparam sequence {
+    ArrowColor DarkOrange
+    LifeLineBorderColor Black
+    ParticipantBorderColor Black
+    ParticipantBackgroundColor LightYellow
+}
+
+actor "Employé" as Emp
+participant "Frontend\n(Angular)" as Front
+participant "Backend\n(Spring Boot)" as Back
+participant "Microservice IA\n(FastAPI)" as Fast
+participant "API\nGitHub" as Git
+participant "CodeLlama\n(Ollama)" as IA
+participant "Communication Hub\n(SSE)" as Hub
+database "Base de\nDonnées" as DB
+
+title Diagramme de Séquence : Évaluation des Hard Skills (Multi-Sources)
+
+Emp -> Front : Uploade CV (PDF) et saisit Username GitHub
+Front -> Back : Transmet données de profil
+
+Back -> Fast : Délègue le parsing du CV
+activate Fast
+Fast -> Fast : Extrait texte (pdfplumber) et entités (langages)
+Fast --> Back : Retourne compétences déclarées (JSON)
+deactivate Fast
+
+Back -> Git : Requête asynchrone pour analyser l'historique
+activate Git
+Git --> Back : Retourne l'activité réelle (commits, repos)
+deactivate Git
+
+Back -> Back : Compare CV (déclaré) vs GitHub (factuel)
+Back -> DB : Sauvegarde l'estimation initiale
+activate DB
+DB --> Back : Confirmation
+deactivate DB
+
+Back -> Fast : Demande test technique adaptatif
+activate Fast
+Fast -> IA : Génère challenge de code ciblant les lacunes
+activate IA
+IA --> Fast : Retourne le challenge (énoncé + tests)
+deactivate IA
+Fast --> Back : Transmet le challenge
+deactivate Fast
+
+Back --> Front : Affiche le challenge à l'employé
+Emp -> Front : Saisit et soumet son code (solution)
+Front -> Back : Envoie le code source
+
+Back -> Fast : Demande évaluation du code
+activate Fast
+Fast -> IA : Analyse syntaxique et algorithmique (CodeLlama)
+activate IA
+IA --> Fast : Retourne résultat (Pass/Fail) et feedback
+deactivate IA
+Fast -> Fast : Calcule le Score de Confiance (CV + GitHub + Test)
+Fast --> Back : Retourne le score global et le niveau (Expertise)
+deactivate Fast
+
+Back -> DB : Enregistre le niveau technique final
+activate DB
+DB --> Back : Confirmation
+deactivate DB
+
+Back -> Hub : Émet événement d'achèvement
+activate Hub
+Hub --> Front : Notification temps réel (SSE) : "Résultats techniques prêts"
+deactivate Hub
+Front --> Emp : Affiche popup de notification
+
+Emp -> Front : Accède à son tableau de bord
+Front -> Back : Récupère métriques Hard Skills
+Back --> Front : Données (Score Job Matching)
+Front --> Emp : Affiche niveau (Beginner à Expert) et recommandations
+@enduml

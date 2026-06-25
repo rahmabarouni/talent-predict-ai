@@ -1,0 +1,140 @@
+<div class="pcm-intro-page">
+  <div class="bg-decor">
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+  </div>
+
+  <div class="intro-content">
+    <!-- Hero Header -->
+    <header class="hero-section">
+      <div class="badge-ai">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        AI-DRIVEN ASSESSMENT
+      </div>
+      <h1>Optimisez votre Profil <span class="gradient-text">Soft Skills</span></h1>
+      <p class="hero-description">
+        Enrichissez votre analyse IA en connectant vos profils professionnels.
+        Plus vous fournissez de contexte, plus votre rapport sera précis.
+      </p>
+    </header>
+
+    <!-- Onboarding Progress -->
+    <div class="onboarding-steps">
+      <div class="step-node active">
+        <span class="node-num">1</span>
+        <span class="node-label">Configuration</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-node">
+        <span class="node-num">2</span>
+        <span class="node-label">Test PCM</span>
+      </div>
+      <div class="step-line"></div>
+      <div class="step-node">
+        <span class="node-num">3</span>
+        <span class="node-label">Résultats</span>
+      </div>
+    </div>
+
+    <!-- Main Form Card -->
+    <main class="glass-card">
+      <form [formGroup]="profileForm" class="form-grid">
+
+        <!-- Identity Section -->
+        <section class="form-section">
+          <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            Votre Identité
+          </h2>
+          <div class="input-group">
+            <label>Nom Complet</label>
+            <div class="input-wrapper">
+              <input type="text" formControlName="fullName" placeholder="Ex: Jean Dupont">
+            </div>
+          </div>
+        </section>
+
+        <!-- Connectivity Section -->
+        <section class="form-section">
+          <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+            </svg>
+            Profil GitHub
+          </h2>
+          <div class="input-group">
+            <label>GitHub Username</label>
+            <div class="input-wrapper">
+              <input type="text" formControlName="githubUsername" placeholder="Ex: johndoe">
+            </div>
+          </div>
+        </section>
+
+        <!-- CV Upload Section -->
+        <section class="form-section">
+          <h2>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Curriculum Vitae
+          </h2>
+          <div class="upload-container">
+            @if (!selectedFile) {
+              <div class="upload-area" (click)="fileInput.click()">
+                <span class="upload-icon">📄</span>
+                @if (!isExtracting) {
+                  <h4>Importer votre CV</h4>
+                }
+                @if (isExtracting) {
+                  <h4>Extraction en cours...</h4>
+                }
+                @if (!isExtracting) {
+                  <p>Format PDF ou TXT uniquement</p>
+                }
+                @if (isExtracting) {
+                  <p>Veuillez patienter quelques secondes</p>
+                }
+                <input #fileInput type="file" (change)="onFileSelected($event)" accept=".pdf,.txt" hidden>
+              </div>
+            }
+            @if (selectedFile) {
+              <div class="file-chip">
+                <div class="file-info">
+                  @if (!isExtracting) {
+                    <span>✅</span>
+                  }
+                  @if (isExtracting) {
+                    <span class="mini-loader"></span>
+                  }
+                  {{ selectedFile.name }}
+                </div>
+                <button class="btn-remove" (click)="clearSelectedFile($event)">✕</button>
+              </div>
+            }
+            @if (fileError || extractionError) {
+              <div class="error-text">{{ fileError || extractionError }}</div>
+            }
+          </div>
+        </section>
+
+        <!-- CTA -->
+        <div class="actions-footer">
+          <button type="button" class="btn-primary-glow" (click)="startTest()" [disabled]="profileForm.invalid || isExtracting">
+            LANCER L'ÉVALUATION IA →
+          </button>
+          <div class="secure-tag">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Anonymisation & Sécurité Active
+          </div>
+        </div>
+
+      </form>
+    </main>
+  </div>
+</div>

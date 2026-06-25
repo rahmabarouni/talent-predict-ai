@@ -1,0 +1,375 @@
+<div class="dashboard-root" id="mr-print">
+
+  <!-- ══ PREMIUM HEADER ════════════════════════════════════════════ -->
+  <header class="dashboard-header">
+    <div class="header-main">
+      <div class="header-titles">
+        <div class="badge-premium">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          TalentPredict Intelligence
+        </div>
+        <h1>Profil de Compétences &amp; Carrière</h1>
+        <p class="subtitle">Analyse multidimensionnelle générée par l'Intelligence Artificielle.</p>
+      </div>
+      
+      <div class="header-actions">
+        <button class="action-btn primary" (click)="exportGlobalPdf()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+          Exporter le Rapport PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="readiness-banner">
+      <div class="rb-info">
+        <span class="rb-label">Indice de Préparation au Marché (Market Readiness)</span>
+        <h2 class="rb-status">{{ readinessLabel }}</h2>
+      </div>
+      <div class="rb-score-wrap">
+        <div class="score-circle" [style.--score-color]="readinessColor" [style.--score-pct]="overallReadiness + '%'">
+          <svg viewBox="0 0 36 36" class="circular-chart">
+            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path class="circle" [attr.stroke]="readinessColor" [attr.stroke-dasharray]="overallReadiness + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+          </svg>
+          <div class="score-text">
+            <span class="val">{{ overallReadiness }}</span>
+            <span class="pct">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══ SKILLS SUMMARY ROW ════════════════════════════════════════ -->
+  <section class="skills-summary-row">
+
+    <!-- Tech Skills Summary Card -->
+    <div class="skill-summary-card tech-summary">
+      <div class="ssc-header">
+        <div class="ssc-icon tech">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <div class="ssc-titles">
+          <h3>Compétences Techniques</h3>
+          <span class="ssc-badge" [style.background]="formattedTechScore >= 70 ? 'var(--success-bg)' : formattedTechScore >= 40 ? 'var(--warning-bg)' : 'var(--danger-bg)'"
+                [style.color]="formattedTechScore >= 70 ? 'var(--success)' : formattedTechScore >= 40 ? 'var(--warning)' : 'var(--danger)'">
+            {{ formattedTechScore > 0 ? (formattedTechScore + '%') : 'Non évalué' }}
+          </span>
+        </div>
+        <button class="ssc-link-btn" (click)="goToTechResults()">
+          Voir Résultats
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="ssc-body">
+        @if (techSkills.length > 0) {
+          <div class="mini-skill-grid">
+            @for (s of techSkills.slice(0, 5); track s.id) {
+              <div class="mini-skill-pill" [title]="s.nom">
+                <span class="pill-name">{{ s.nom }}</span>
+                <span class="pill-bar-wrap">
+                  <span class="pill-bar-fill" [style.width.%]="s.score100" [style.background]="s.score100 >= 70 ? '#22c55e' : s.score100 >= 40 ? '#f59e0b' : '#ef4444'"></span>
+                </span>
+                <span class="pill-score">{{ s.score100 }}%</span>
+              </div>
+            }
+          </div>
+          @if (techSkills.length === 0) {
+            <p class="ssc-empty">Aucune compétence technique enregistrée.</p>
+          }
+        } @else {
+          <p class="ssc-empty">Passez le test technique pour voir vos résultats.</p>
+        }
+      </div>
+      <div class="ssc-footer">
+        <button class="ssc-action-btn" (click)="goToTech()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Passer / Améliorer le test Tech
+        </button>
+      </div>
+    </div>
+
+    <!-- Soft Skills Summary Card -->
+    <div class="skill-summary-card soft-summary">
+      <div class="ssc-header">
+        <div class="ssc-icon soft">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="ssc-titles">
+          <h3>Soft Skills &amp; Personnalité</h3>
+          <span class="ssc-badge" [style.background]="formattedSoftScore >= 70 ? 'var(--success-bg)' : formattedSoftScore >= 40 ? 'var(--warning-bg)' : 'var(--danger-bg)'"
+                [style.color]="formattedSoftScore >= 70 ? 'var(--success)' : formattedSoftScore >= 40 ? 'var(--warning)' : 'var(--danger)'">
+            {{ formattedSoftScore > 0 ? (formattedSoftScore + '/100') : 'Non évalué' }}
+          </span>
+        </div>
+        <button class="ssc-link-btn" (click)="goToSoftResults()">
+          Voir Résultats
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="ssc-body">
+        @if (getSoftSkillEntries().length > 0) {
+          <div class="mini-skill-grid">
+            @for (entry of getSoftSkillEntries().slice(0, 5); track entry.name) {
+              <div class="mini-skill-pill">
+                <span class="pill-name">{{ softSkillIcons[entry.name] || '🔹' }} {{ entry.name }}</span>
+                <span class="pill-bar-wrap">
+                  <span class="pill-bar-fill" [style.width.%]="entry.score * 10" [style.background]="entry.score >= 7 ? '#22c55e' : entry.score >= 5 ? '#f59e0b' : '#ef4444'"></span>
+                </span>
+                <span class="pill-score">{{ entry.score }}/10</span>
+              </div>
+            }
+          </div>
+          @if (pcmType) {
+            <div class="pcm-tag">
+              <span class="pcm-type-label">Profil PCM :</span>
+              <span class="pcm-type-value">{{ pcmType }}</span>
+            </div>
+          }
+        } @else {
+          <p class="ssc-empty">Passez l'évaluation soft skills pour voir vos résultats.</p>
+        }
+      </div>
+      <div class="ssc-footer">
+        <button class="ssc-action-btn" (click)="goToSoft()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 8 16 12 12 16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          Passer l'évaluation Soft Skills
+        </button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══ BENTO GRID DASHBOARD ════════════════════════════════════════ -->
+  <div class="bento-grid">
+    
+    <!-- 2. Strengths (Forces) -->
+    <div class="bento-box strengths-box">
+      <div class="box-header">
+        <div class="bh-title">
+          <div class="icon-circle green"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <h3>Forces Validées</h3>
+        </div>
+      </div>
+      <div class="box-body scrollable">
+        <ul class="insight-list">
+          @if (pcmType) {
+            <li><span class="dot green"></span> Profil {{ pcmType }} — {{ pcmDescription | slice:0:60 }}…</li>
+          }
+          @for (s of techSkills.slice(0,2); track s.id) {
+            <li><span class="dot green"></span> {{ s.nom }} — maîtrisé à {{ s.score100 }}%</li>
+          }
+          @for (entry of getSoftSkillEntries().slice(0,2); track entry.name) {
+            @if (entry.score >= 7) {
+              <li><span class="dot green"></span> {{ softSkillIcons[entry.name] || '' }} {{ entry.name }} ({{ entry.score }}/10)</li>
+            }
+          }
+          @if (!pcmType && techSkills.length === 0) {
+            <li class="soft-strength"><span class="dot orange"></span> Profil en attente d'analyse détaillée…</li>
+          }
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3. Gaps & Complement -->
+    <div class="bento-box gaps-box">
+      <div class="box-header">
+        <div class="bh-title">
+          <div class="icon-circle orange"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+          <h3>Gaps &amp; Compléments</h3>
+        </div>
+      </div>
+      <div class="box-body scrollable">
+        @if (techGaps.length > 0) {
+          <div class="gap-group">
+            <span class="group-lbl">🔧 Gaps Techniques</span>
+            <div class="gap-tags">
+              @for (gap of techGaps.slice(0, 4); track gap) { <span class="tag tech">{{ gap }}</span> }
+            </div>
+          </div>
+        }
+        @if (softGaps.length > 0) {
+          <div class="gap-group mt-3">
+            <span class="group-lbl">🧠 Gaps Soft Skills</span>
+            <div class="gap-tags">
+              @for (sgap of softGaps.slice(0, 3); track sgap) { <span class="tag soft">{{ sgap }}</span> }
+            </div>
+          </div>
+        }
+        @if (techGaps.length === 0 && softGaps.length === 0) {
+          <p class="text-muted">Complétez vos évaluations pour identifier vos axes d'amélioration.</p>
+        }
+        <div class="gap-complement-cta">
+          <button class="formations-btn" (click)="goToFormations()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Combler les gaps — Mes Formations
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Radar Chart (Soft Skills) -->
+    <div class="bento-box radar-box">
+      <div class="box-header">
+        <div class="bh-title">
+          <h3>Empreinte Comportementale</h3>
+        </div>
+      </div>
+      <div class="box-body center-content">
+        @if (getSoftSkillEntries().length > 0) {
+          <svg class="premium-radar" viewBox="0 0 280 280">
+            <defs>
+              <linearGradient id="radarFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="rgba(99, 102, 241, 0.4)" />
+                <stop offset="100%" stop-color="rgba(168, 85, 247, 0.1)" />
+              </linearGradient>
+            </defs>
+            <polygon [attr.points]="getRadarGridPoints(1.0)" class="grid-line" />
+            <polygon [attr.points]="getRadarGridPoints(0.66)" class="grid-line" />
+            <polygon [attr.points]="getRadarGridPoints(0.33)" class="grid-line" />
+            
+            @for (axis of radarAxisPoints; track axis.x2) {
+              <line x1="130" y1="130" [attr.x2]="axis.x2" [attr.y2]="axis.y2" class="axis-line" />
+            }
+            
+            <polygon [attr.points]="radarPolygonPoints" class="data-area" fill="url(#radarFill)" stroke="#6366f1" stroke-width="2" />
+            
+            @for (entry of getSoftSkillEntries().slice(0, 5); track entry.name; let i = $index) {
+              <circle [attr.cx]="getRadarPointX(entry.score, i, 5)" [attr.cy]="getRadarPointY(entry.score, i, 5)" r="5" class="data-point" />
+            }
+
+            @for (label of radarLabels; track label.text) {
+              <text [attr.x]="label.x" [attr.y]="label.y" [attr.text-anchor]="label.anchor" class="radar-txt" dy="5">{{ label.text }}</text>
+            }
+          </svg>
+          <button class="ssc-link-btn mt-3" (click)="goToSoftResults()">Détails Soft Skills →</button>
+        } @else {
+          <p class="text-muted">Données insuffisantes.</p>
+        }
+      </div>
+    </div>
+
+    <!-- 5. Tech Stack -->
+    <div class="bento-box tech-box">
+      <div class="box-header">
+        <div class="bh-title">
+          <h3>Expertise Technique</h3>
+        </div>
+        <button class="action-btn ghost small" (click)="goToTechResults()">Voir Résultats</button>
+      </div>
+      <div class="box-body">
+        <div class="tech-list">
+          @for (s of techSkills; track s.id) {
+            <div class="tech-row">
+              <div class="tr-top">
+                <span class="tr-name">{{ s.nom }}</span>
+                <span class="tr-score">{{ s.score100 }}%</span>
+              </div>
+              <div class="tr-bar"><div class="tr-fill" [style.width.%]="s.score100" [style.background]="s.score100 >= 70 ? '#22c55e' : s.score100 >= 40 ? '#f59e0b' : '#ef4444'"></div></div>
+            </div>
+          }
+          @if (techSkills.length === 0) {
+            <p class="text-muted">Aucune donnée. Passez le test technique.</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. Career Path Alignment (Full Width) -->
+    <div class="bento-box career-box col-span-2">
+      <div class="box-header">
+        <div class="bh-title">
+          <div class="icon-circle blue"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <h3>Alignement &amp; Plan de Carrière</h3>
+        </div>
+        <button class="action-btn secondary small" (click)="goToProgress()">Plan d'Action</button>
+      </div>
+      <div class="box-body">
+        <div class="career-cards">
+          @for (cm of careerMatches; track cm.role; let idx = $index) {
+            <div class="c-card" [class.optimal]="idx === 0">
+              @if (idx === 0) { <div class="c-badge">Optimal Match</div> }
+              <div class="c-head">
+                <h4>{{ cm.role }}</h4>
+                <div class="match-score" [style.color]="cm.match >= 75 ? '#22c55e' : cm.match >= 55 ? '#f59e0b' : '#ef4444'"
+                     [style.background]="cm.match >= 75 ? 'var(--success-bg)' : cm.match >= 55 ? 'var(--warning-bg)' : 'var(--danger-bg)'">
+                  {{ cm.match }}% Match
+                </div>
+              </div>
+              <p class="c-desc">{{ cm.reason }}</p>
+              
+              <!-- Career Gaps Complement -->
+              @if (cm.gaps && cm.gaps.length > 0) {
+                <div class="career-gaps">
+                  <span class="cg-label">Compétences à développer :</span>
+                  <div class="cg-tags">
+                    @for (gap of cm.gaps; track gap) {
+                      <span class="cg-tag">{{ gap }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <div class="c-progress">
+                <div class="cp-labels"><span>Acquis</span><span>Cible 100%</span></div>
+                <div class="cp-track">
+                  <div class="cp-fill" [style.width.%]="cm.match"></div>
+                  <div class="cp-target"></div>
+                </div>
+              </div>
+
+              <!-- CTA to Formations -->
+              <button class="career-formations-btn" (click)="goToFormations()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                Démarrer les formations
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Global Actions Row -->
+    <div class="bento-box actions-box col-span-3">
+      <div class="global-actions-row">
+        <div class="ga-block">
+          <div class="ga-icon export">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+          </div>
+          <div class="ga-text">
+            <strong>Exporter le Rapport Complet</strong>
+            <span>PDF global incluant Tech, Soft Skills &amp; Plan Carrière</span>
+          </div>
+          <button class="ga-btn primary" (click)="exportGlobalPdf()">Exporter PDF</button>
+        </div>
+
+        <div class="ga-divider"></div>
+
+        <div class="ga-block">
+          <div class="ga-icon formations">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          </div>
+          <div class="ga-text">
+            <strong>Mes Formations Recommandées</strong>
+            <span>Commencez un parcours adapté à vos gaps identifiés</span>
+          </div>
+          <button class="ga-btn formations" (click)="goToFormations()">Accéder aux Formations</button>
+        </div>
+
+        <div class="ga-divider"></div>
+
+        <div class="ga-block">
+          <div class="ga-icon progress">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="ga-text">
+            <strong>Plan d'Action &amp; Progression</strong>
+            <span>Suivez votre évolution et vos objectifs de carrière</span>
+          </div>
+          <button class="ga-btn secondary" (click)="goToProgress()">Voir ma Progression</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

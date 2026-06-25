@@ -1,0 +1,290 @@
+<div class="ss-wrap">
+
+  <!-- ══ HEADER ══════════════════════════════════════════════════ -->
+  <div class="ss-header">
+    <button type="button" class="back-btn" (click)="goBack()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Retour
+    </button>
+    <div class="header-title">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <h1>Simulateur de Scénario</h1>
+    </div>
+    @if (scenario && !evaluation) {
+      <span class="phase-badge">Phase : Réponse libre</span>
+    }
+    @if (evaluation) {
+      <span class="phase-badge eval-badge">Phase : Évaluation IA</span>
+    }
+  </div>
+
+  <!-- ══ STEP 1: ROLE SELECTION ══════════════════════════════════ -->
+  @if (!scenario && !generatingScenario) {
+    <div class="setup-section">
+      <div class="setup-card">
+        <div class="setup-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <h2 class="setup-title">Choisissez un rôle professionnel</h2>
+        <p class="setup-sub">L'IA génèrera un scénario de conflit réaliste adapté à ce rôle et à ce niveau.</p>
+
+        <!-- Role suggestions -->
+        <div class="role-chips">
+          @for (r of rolesSuggestions; track r) {
+            <button
+              type="button"
+              class="role-chip"
+              [class.active]="role === r"
+              (click)="selectRole(r)">
+              {{ r }}
+            </button>
+          }
+        </div>
+
+        <!-- Custom role -->
+        <div class="custom-role-row">
+          <input
+            type="text"
+            class="text-input"
+            [(ngModel)]="role"
+            placeholder="Ou saisissez un rôle personnalisé…"
+          />
+        </div>
+
+        <!-- Level selector -->
+        <label class="field-label">Niveau d'expérience</label>
+        <div class="level-pills">
+          @for (lv of levels; track lv) {
+            <button
+              type="button"
+              class="level-pill"
+              [class.active]="selectedLevel === lv"
+              (click)="selectedLevel = lv">
+              {{ lv }}
+            </button>
+          }
+        </div>
+
+        <!-- Generate button -->
+        <button
+          type="button"
+          class="btn generate-btn"
+          [disabled]="generatingScenario || !role.trim()"
+          (click)="generateScenario()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Générer le scénario
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ══ LOADING ═════════════════════════════════════════════════ -->
+  @if (generatingScenario) {
+    <div class="state-card">
+      <div class="big-spinner"></div>
+      <p class="state-title">Génération du scénario…</p>
+      <p class="state-sub">
+        L'IA crée une situation professionnelle réaliste pour un
+        <strong>{{ selectedLevel }} {{ role }}</strong>.
+      </p>
+    </div>
+  }
+
+  <!-- ══ STEP 2: SCENARIO + RESPONSE ═════════════════════════════ -->
+  @if (scenario && !generatingScenario && !evaluation) {
+    <div class="scenario-section">
+      <!-- Scenario card -->
+      <div class="scenario-card">
+        <div class="scenario-header">
+          <div class="scenario-icon">💼</div>
+          <div>
+            <h2 class="scenario-title">{{ scenario.scenario_title }}</h2>
+            <div class="skills-tested">
+              @for (skill of scenario.skills_tested; track skill) {
+                <span class="tested-chip">{{ skill }}</span>
+              }
+            </div>
+          </div>
+        </div>
+        <p class="scenario-body">{{ scenario.scenario_description }}</p>
+      </div>
+
+      <!-- Response textarea -->
+      <div class="response-section">
+        <label class="field-label">Votre réponse libre</label>
+        <p class="field-hint">
+          Décrivez exactement ce que vous diriez et feriez dans cette situation. Soyez précis et authentique.
+          <em>Pas de QCM : l'IA analyse votre communication réelle.</em>
+        </p>
+        <div class="editor-section">
+          <div class="editor-header">
+            <span class="editor-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Réponse
+            </span>
+            <span class="char-count" [class.short]="responseTooShort" [class.ready]="responseReady">
+              {{ responseLength }} caractères
+              @if (responseTooShort) { <span>— minimum 50</span> }
+            </span>
+          </div>
+          <textarea
+            class="response-editor"
+            rows="10"
+            [(ngModel)]="candidateResponse"
+            [disabled]="submitting"
+            placeholder="Ex: Je commencerais par organiser une réunion d'équipe pour évaluer les priorités…"
+          ></textarea>
+        </div>
+
+        <!-- Submit -->
+        <div class="action-bar">
+          <button type="button" class="btn secondary-btn" (click)="reset()">
+            Changer de rôle
+          </button>
+          <button
+            type="button"
+            class="btn submit-btn"
+            [disabled]="submitting || !responseReady"
+            (click)="submitResponse()">
+            @if (submitting) {
+              <span class="spinner white"></span> Évaluation IA…
+            } @else {
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              Soumettre ma réponse
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══ EVALUATING ══════════════════════════════════════════════ -->
+  @if (submitting) {
+    <div class="state-card eval-loading">
+      <div class="big-spinner"></div>
+      <p class="state-title">Analyse psychométrique en cours…</p>
+      <p class="state-sub">
+        L'IA évalue votre empathie, assertivité, pragmatisme et clarté de communication.
+      </p>
+    </div>
+  }
+
+  <!-- ══ STEP 3: RESULTS ═════════════════════════════════════════ -->
+  @if (evaluation && !submitting) {
+    <div class="results-section">
+
+      <!-- Overall Score -->
+      <div class="overall-card">
+        <div class="overall-score-circle" [ngClass]="getScoreClass(averageScore)">
+          <span class="score-number">{{ averageScore }}</span>
+          <span class="score-label">/ 100</span>
+        </div>
+        <div class="overall-text">
+          <h2 class="overall-title">Évaluation Soft Skills</h2>
+          <p class="overall-feedback">{{ evaluation.overall_feedback }}</p>
+        </div>
+      </div>
+
+      <!-- Score Radar (4 categories) -->
+      <div class="scores-grid">
+        @for (entry of scoreEntries; track entry.key) {
+          <div class="score-card">
+            <span class="score-emoji">{{ entry.icon }}</span>
+            <div class="score-bar-wrap">
+              <div class="score-bar-bg">
+                <div
+                  class="score-bar-fill"
+                  [ngClass]="getScoreClass(entry.value)"
+                  [style.width.%]="entry.value">
+                </div>
+              </div>
+              <span class="score-value" [ngClass]="getScoreClass(entry.value)">{{ entry.value }}</span>
+            </div>
+            <span class="score-name">{{ entry.label }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Strengths & Improvements -->
+      <div class="feedback-grid">
+        @if (evaluation && evaluation.strengths && evaluation.strengths.length > 0) {
+          <div class="feedback-card strengths-card">
+            <h3 class="feedback-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Points forts
+            </h3>
+            <ul class="feedback-list">
+              @for (s of evaluation.strengths; track s) {
+                <li>{{ s }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (evaluation && evaluation.areas_for_improvement && evaluation.areas_for_improvement.length > 0) {
+          <div class="feedback-card improve-card">
+            <h3 class="feedback-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              Axes d'amélioration
+            </h3>
+            <ul class="feedback-list">
+              @for (a of evaluation.areas_for_improvement; track a) {
+                <li>{{ a }}</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+
+
+
+      <!-- Culture Add Profile -->
+      @if (evaluation.culture_add_profile) {
+        <div class="culture-card">
+          <div class="culture-icon">🧬</div>
+          <div>
+            <h3 class="culture-title">Profil "Culture Add"</h3>
+            <p class="culture-text">{{ evaluation.culture_add_profile }}</p>
+          </div>
+        </div>
+      }
+
+      <!-- Actions -->
+      <div class="result-actions">
+        <button type="button" class="btn retry-btn" (click)="newScenarioSameRole()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 .49-4.96"/>
+          </svg>
+          Nouveau scénario
+        </button>
+        <button type="button" class="btn secondary-btn" (click)="reset()">
+          Changer de rôle
+        </button>
+        <button type="button" class="btn submit-btn" (click)="goToSoftResults()">
+          Voir mon Rapport Soft Skills →
+        </button>
+      </div>
+    </div>
+  }
+
+</div>

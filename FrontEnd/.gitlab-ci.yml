@@ -1,0 +1,106 @@
+# ============================================================
+# GitLab CI/CD — Frontend (Angular)
+# ============================================================
+
+stages:
+  - install
+  - build
+  - docker
+  - deploy
+
+# --------------------------------------------------
+# Global settings
+# --------------------------------------------------
+variables:
+  DOCKER_IMAGE: "mohamedabdeladhim/talentpredict-frontend"
+  DOCKER_TAG: "$CI_COMMIT_SHORT_SHA"
+  CONTAINER_NAME: "talentpredict-frontend"
+  NODE_OPTIONS: "--max_old_space_size=4096"
+
+# npm dependency cache
+cache:
+  key:
+    files:
+      - FrontEnd/package-lock.json
+  paths:
+    - FrontEnd/node_modules/
+  policy: pull-push
+
+# --------------------------------------------------
+# Stage: install
+# --------------------------------------------------
+install:
+  stage: install
+  image: node:22-alpine
+  script:
+    - cd FrontEnd
+    - npm ci --quiet
+
+# --------------------------------------------------
+# Stage: build
+# --------------------------------------------------
+build:
+  stage: build
+  image: node:22-alpine
+  script:
+    - cd FrontEnd
+    - npx ng build --configuration production
+  artifacts:
+    paths:
+      - FrontEnd/dist/
+    expire_in: 1 day
+
+# --------------------------------------------------
+# Stage: docker — pushes to Docker Hub
+# --------------------------------------------------
+docker:
+  stage: docker
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+  script:
+    - cd FrontEnd
+    - docker build
+        --cache-from "$DOCKER_IMAGE:latest"
+        -t "$DOCKER_IMAGE:$DOCKER_TAG"
+        -t "$DOCKER_IMAGE:latest"
+        .
+    - docker push "$DOCKER_IMAGE:$DOCKER_TAG"
+    - docker push "$DOCKER_IMAGE:latest"
+  rules:
+    - when: always
+
+# --------------------------------------------------
+# Stage: deploy — SSH into your server and run container
+# --------------------------------------------------
+deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$DEPLOY_SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_IP "
+        echo '$DOCKER_HUB_PASSWORD' | docker login -u '$DOCKER_HUB_USERNAME' --password-stdin &&
+        docker pull $DOCKER_IMAGE:$DOCKER_TAG &&
+        docker stop $CONTAINER_NAME || true &&
+        docker rm $CONTAINER_NAME || true &&
+        docker run -d \
+          --name $CONTAINER_NAME \
+          --restart unless-stopped \
+          -p 4200:80 \
+          $DOCKER_IMAGE:$DOCKER_TAG
+      "
+  rules:
+    - when: manual
+  environment:
+    name: production
+    url: http://$DEPLOY_SERVER_IP:4200

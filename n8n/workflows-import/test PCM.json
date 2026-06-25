@@ -1,0 +1,180 @@
+{
+    "updatedAt":  "2026-03-15T02:22:06.765Z",
+    "createdAt":  "2026-03-14T00:49:19.085Z",
+    "id":  "sBRA1eDa5dzz2kAh",
+    "name":  "test PCM",
+    "description":  null,
+    "active":  true,
+    "isArchived":  false,
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "jsCode":  "// Get data from webhook body\nconst body = $input.first().json.body || $input.first().json;\n\nconst userName = body[\u0027Votre nom complet\u0027] || body.user_name || \"Anonymous\";\n\n// Extract question responses (Q1-Q18)\nconst q1  = Number(body.q1  || body[\u0027Q1\u0027]  || 0);\nconst q2  = Number(body.q2  || body[\u0027Q2\u0027]  || 0);\nconst q3  = Number(body.q3  || body[\u0027Q3\u0027]  || 0);\nconst q4  = Number(body.q4  || body[\u0027Q4\u0027]  || 0);\nconst q5  = Number(body.q5  || body[\u0027Q5\u0027]  || 0);\nconst q6  = Number(body.q6  || body[\u0027Q6\u0027]  || 0);\nconst q7  = Number(body.q7  || body[\u0027Q7\u0027]  || 0);\nconst q8  = Number(body.q8  || body[\u0027Q8\u0027]  || 0);\nconst q9  = Number(body.q9  || body[\u0027Q9\u0027]  || 0);\nconst q10 = Number(body.q10 || body[\u0027Q10\u0027] || 0);\nconst q11 = Number(body.q11 || body[\u0027Q11\u0027] || 0);\nconst q12 = Number(body.q12 || body[\u0027Q12\u0027] || 0);\nconst q13 = Number(body.q13 || body[\u0027Q13\u0027] || 0);\nconst q14 = Number(body.q14 || body[\u0027Q14\u0027] || 0);\nconst q15 = Number(body.q15 || body[\u0027Q15\u0027] || 0);\nconst q16 = Number(body.q16 || body[\u0027Q16\u0027] || 0);\nconst q17 = Number(body.q17 || body[\u0027Q17\u0027] || 0);\nconst q18 = Number(body.q18 || body[\u0027Q18\u0027] || 0);\n\n// Calculate scores\nconst scores = {\n  communication: Math.round((q1 + q2 + q3) / 3 * 10) / 10,\n  discipline:    Math.round((q4 + q5 + q6) / 3 * 10) / 10,\n  curiosity:     Math.round((q7 + q8 + q9) / 3 * 10) / 10,\n  collaboration: Math.round((q10 + q11 + q12) / 3 * 10) / 10,\n  ownership:     Math.round((q13 + q14 + q15) / 3 * 10) / 10,\n  leadership:    Math.round((q16 + q17 + q18) / 3 * 10) / 10\n};\n\nconst overall = Math.round(\n  Object.values(scores).reduce((a, b) =\u003e a + b, 0) / 6 * 10\n) / 10;\n\nconst skillsArray = Object.entries(scores).map(([skill, score]) =\u003e ({ skill, score }));\nskillsArray.sort((a, b) =\u003e b.score - a.score);\n\nconst result = {\n  user_name: userName,\n  timestamp: new Date().toISOString(),\n  soft_skills: {\n    communication: { score: scores.communication, evidence: \"Self-assessment via PCM test\" },\n    discipline:    { score: scores.discipline,    evidence: \"Self-assessment via PCM test\" },\n    curiosity:     { score: scores.curiosity,     evidence: \"Self-assessment via PCM test\" },\n    collaboration: { score: scores.collaboration, evidence: \"Self-assessment via PCM test\" },\n    ownership:     { score: scores.ownership,     evidence: \"Self-assessment via PCM test\" },\n    leadership:    { score: scores.leadership,    evidence: \"Self-assessment via PCM test\" }\n  },\n  overall_score: overall,\n  top_strength: skillsArray[0].skill,\n  main_weakness: skillsArray[skillsArray.length - 1].skill,\n  source: \"PCM\",\n  raw_responses: { q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18 }\n};\n\nreturn [{ json: result }];"
+                                     },
+                      "type":  "n8n-nodes-base.code",
+                      "typeVersion":  2,
+                      "position":  [
+                                       416,
+                                       0
+                                   ],
+                      "id":  "b4b152e0-8440-49c6-af72-2b6ba371274f",
+                      "name":  "Code in JavaScript"
+                  },
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "pcm-test",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       208,
+                                       0
+                                   ],
+                      "id":  "55f09bb1-3d46-402d-8a84-e07efc8da02d",
+                      "name":  "Webhook",
+                      "webhookId":  "62ee5d30-b7ed-446a-8821-f46708ee3be1"
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "allIncomingItems",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.5,
+                      "position":  [
+                                       624,
+                                       0
+                                   ],
+                      "id":  "be637bc3-1bfe-49d4-b128-0a81d7940392",
+                      "name":  "Respond to Webhook"
+                  }
+              ],
+    "connections":  {
+                        "Webhook":  {
+                                        "main":  [
+                                                     [
+                                                         {
+                                                             "node":  "Code in JavaScript",
+                                                             "type":  "main",
+                                                             "index":  0
+                                                         }
+                                                     ]
+                                                 ]
+                                    },
+                        "Code in JavaScript":  {
+                                                   "main":  [
+                                                                [
+                                                                    {
+                                                                        "node":  "Respond to Webhook",
+                                                                        "type":  "main",
+                                                                        "index":  0
+                                                                    }
+                                                                ]
+                                                            ]
+                                               }
+                    },
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "binaryMode":  "separate",
+                     "availableInMCP":  false
+                 },
+    "staticData":  null,
+    "meta":  null,
+    "pinData":  {
+                    "Code in JavaScript":  [
+                                               {
+                                                   "json":  {
+                                                                "user_name":  "rahma",
+                                                                "timestamp":  "2026-03-14T01:15:53.741Z",
+                                                                "soft_skills":  {
+                                                                                    "communication":  {
+                                                                                                          "score":  6,
+                                                                                                          "evidence":  "Self-assessment via PCM test"
+                                                                                                      },
+                                                                                    "discipline":  {
+                                                                                                       "score":  3,
+                                                                                                       "evidence":  "Self-assessment via PCM test"
+                                                                                                   },
+                                                                                    "curiosity":  {
+                                                                                                      "score":  5,
+                                                                                                      "evidence":  "Self-assessment via PCM test"
+                                                                                                  },
+                                                                                    "collaboration":  {
+                                                                                                          "score":  6.3,
+                                                                                                          "evidence":  "Self-assessment via PCM test"
+                                                                                                      },
+                                                                                    "ownership":  {
+                                                                                                      "score":  6.3,
+                                                                                                      "evidence":  "Self-assessment via PCM test"
+                                                                                                  },
+                                                                                    "leadership":  {
+                                                                                                       "score":  4.3,
+                                                                                                       "evidence":  "Self-assessment via PCM test"
+                                                                                                   }
+                                                                                },
+                                                                "overall_score":  5.2,
+                                                                "top_strength":  "collaboration",
+                                                                "main_weakness":  "discipline",
+                                                                "source":  "PCM",
+                                                                "raw_responses":  {
+                                                                                      "q1":  4,
+                                                                                      "q2":  5,
+                                                                                      "q3":  9,
+                                                                                      "q4":  8,
+                                                                                      "q5":  0,
+                                                                                      "q6":  1,
+                                                                                      "q7":  6,
+                                                                                      "q8":  0,
+                                                                                      "q9":  9,
+                                                                                      "q10":  9,
+                                                                                      "q11":  9,
+                                                                                      "q12":  1,
+                                                                                      "q13":  8,
+                                                                                      "q14":  5,
+                                                                                      "q15":  6,
+                                                                                      "q16":  5,
+                                                                                      "q17":  4,
+                                                                                      "q18":  4
+                                                                                  }
+                                                            }
+                                               }
+                                           ]
+                },
+    "versionId":  "a08602a9-28df-4c64-b077-49f0505fadb6",
+    "activeVersionId":  "a08602a9-28df-4c64-b077-49f0505fadb6",
+    "versionCounter":  103,
+    "triggerCount":  1,
+    "tags":  [
+
+             ],
+    "shared":  [
+                   {
+                       "updatedAt":  "2026-03-14T00:49:19.091Z",
+                       "createdAt":  "2026-03-14T00:49:19.091Z",
+                       "role":  "workflow:owner",
+                       "workflowId":  "sBRA1eDa5dzz2kAh",
+                       "projectId":  "IAa9yZAUV6a9JJWQ",
+                       "project":  {
+                                       "updatedAt":  "2026-03-13T02:11:48.069Z",
+                                       "createdAt":  "2026-03-13T02:10:19.257Z",
+                                       "id":  "IAa9yZAUV6a9JJWQ",
+                                       "name":  "Wael Barouni \u003cbarouniwael@gmail.com\u003e",
+                                       "type":  "personal",
+                                       "icon":  null,
+                                       "description":  null,
+                                       "creatorId":  "682088f5-4f9f-45ab-9027-c5e288a70089"
+                                   }
+                   }
+               ],
+    "versionMetadata":  {
+                            "name":  "Version a08602a9",
+                            "description":  ""
+                        }
+}

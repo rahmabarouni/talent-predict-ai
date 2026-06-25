@@ -1,0 +1,987 @@
+[
+    {
+        "updatedAt": "2026-03-17T02:19:41.045Z",
+        "createdAt": "2026-03-13T02:17:41.979Z",
+        "id": "bM0mgiEvbHqrkTrK",
+        "name": "github",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "url": "=https://api.github.com/users/{{ $('Code').first().json.github_username }}",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.4,
+                "position": [
+                    432,
+                    0
+                ],
+                "id": "7f79d681-9597-4a79-94b9-921cc58f83fb",
+                "name": "HTTP Request"
+            },
+            {
+                "parameters": {
+                    "url": "=https://api.github.com/users/{{ $('Code').first().json.github_username }}/repos",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.httpRequest",
+                "typeVersion": 4.4,
+                "position": [
+                    624,
+                    0
+                ],
+                "id": "54c9bdf9-cbc5-41f1-8f5b-82f23f5c50f3",
+                "name": "HTTP Request1"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const webhookData = $('Webhook').first().json.body;\nconst profile = $('HTTP Request').first().json;\nconst repos = $('HTTP Request1').all().map(r => r.json);\n\nconst summary = {\n  username: profile.login,\n  followers: profile.followers,\n  following: profile.following,\n  public_repos: profile.public_repos,\n  has_bio: profile.bio !== null,\n  account_age_years: Math.floor(\n    (new Date() - new Date(profile.created_at)) / (1000*60*60*24*365)\n  ),\n  repos: repos.map(r => ({\n    name: r.name,\n    description: r.description,\n    language: r.language,\n    stars: r.stargazers_count,\n    forks: r.forks_count,\n    is_fork: r.fork,\n    has_issues_enabled: r.has_issues,\n    open_issues: r.open_issues_count,\n    has_license: r.license !== null,\n    recently_updated: new Date(r.updated_at) > new Date(Date.now() - 90*24*60*60*1000)\n  }))\n};\n\nreturn [{ json: summary }];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    832,
+                    0
+                ],
+                "id": "9518bb1b-bdef-44fe-af37-8f350edf0625",
+                "name": "Code in JavaScript"
+            },
+            {
+                "parameters": {
+                    "promptType": "define",
+                    "text": "=You are an expert HR analyst specialized in soft skills evaluation.\n\nAnalyze this GitHub profile data and evaluate the person's soft skills.\nReturn ONLY a JSON object with exactly this structure, no extra text:\n\n{\n  \"soft_skills\": {\n    \"communication\": { \"score\": 7, \"evidence\": \"reason here\" },\n    \"discipline\": { \"score\": 8, \"evidence\": \"reason here\" },\n    \"curiosity\": { \"score\": 9, \"evidence\": \"reason here\" },\n    \"collaboration\": { \"score\": 6, \"evidence\": \"reason here\" },\n    \"ownership\": { \"score\": 8, \"evidence\": \"reason here\" },\n    \"leadership\": { \"score\": 9, \"evidence\": \"reason here\" }\n  },\n  \"overall_score\": 8,\n  \"top_strength\": \"discipline\",\n  \"main_weakness\": \"communication\",\n  \"summary\": \"Two sentence summary here.\"\n}\n\nGitHub data to analyze:\n{{ $json }}",
+                    "batching": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.chainLlm",
+                "typeVersion": 1.9,
+                "position": [
+                    1040,
+                    0
+                ],
+                "id": "48215a17-3214-474b-ab37-86ae5b91c43c",
+                "name": "Basic LLM Chain"
+            },
+            {
+                "parameters": {
+                    "model": "=llama3.2:latest",
+                    "options": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+                "typeVersion": 1,
+                "position": [
+                    976,
+                    208
+                ],
+                "id": "7c4f57e0-117a-496f-a404-54c662d4d631",
+                "name": "Ollama Chat Model",
+                "credentials": {
+                    "ollamaApi": {
+                        "id": "HpuPylA5HQ3YuNY7",
+                        "name": "Ollama account 2"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "github-analyze",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2.1,
+                "position": [
+                    0,
+                    0
+                ],
+                "id": "d8af1e54-e6a5-43c7-be1f-2d1cf5e0ace0",
+                "name": "Webhook",
+                "webhookId": "bb3dea38-7a77-4270-9b3d-0b07837498b9"
+            },
+            {
+                "parameters": {
+                    "respondWith": "allIncomingItems",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.5,
+                "position": [
+                    1408,
+                    48
+                ],
+                "id": "0e078225-82b4-432e-bcf4-2416eecb43d0",
+                "name": "Respond to Webhook"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const data = $input.first().json;\n\nconst username = data.github_username || \n                 (data.body && data.body.github_username) || \n                 'torvalds';\n\nreturn [{\n  json: {\n    github_username: username\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    208,
+                    0
+                ],
+                "id": "1e52c152-df0f-47e0-86e5-14e3c7554e94",
+                "name": "Code"
+            }
+        ],
+        "connections": {
+            "HTTP Request": {
+                "main": [
+                    [
+                        {
+                            "node": "HTTP Request1",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "HTTP Request1": {
+                "main": [
+                    [
+                        {
+                            "node": "Code in JavaScript",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Code in JavaScript": {
+                "main": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Ollama Chat Model": {
+                "ai_languageModel": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "ai_languageModel",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Basic LLM Chain": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Code",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Code": {
+                "main": [
+                    [
+                        {
+                            "node": "HTTP Request",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate",
+            "availableInMCP": false
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "9849abc5-2d5b-4f8a-88bc-373400d8f54d",
+        "activeVersionId": "9849abc5-2d5b-4f8a-88bc-373400d8f54d",
+        "versionCounter": 112,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-03-13T02:17:41.983Z",
+                "createdAt": "2026-03-13T02:17:41.983Z",
+                "role": "workflow:owner",
+                "workflowId": "bM0mgiEvbHqrkTrK",
+                "projectId": "IAa9yZAUV6a9JJWQ",
+                "project": {
+                    "updatedAt": "2026-03-13T02:11:48.069Z",
+                    "createdAt": "2026-03-13T02:10:19.257Z",
+                    "id": "IAa9yZAUV6a9JJWQ",
+                    "name": "Wael Barouni <barouniwael@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "682088f5-4f9f-45ab-9027-c5e288a70089"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": "Version 9849abc5",
+            "description": ""
+        }
+    },
+    {
+        "updatedAt": "2026-03-17T02:20:35.422Z",
+        "createdAt": "2026-03-13T03:31:28.669Z",
+        "id": "3GtwRM6gFdZEghnL",
+        "name": "cv parser",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "promptType": "define",
+                    "text": "=You are an expert HR analyst specialized in soft skills evaluation from CVs.\n\nAnalyze this CV text and evaluate the person's soft skills based on:\n- Their work experience descriptions\n- Their responsibilities and achievements\n- Their communication style in the CV\n- Their demonstrated leadership, teamwork, and initiative\n\nCRITICAL INSTRUCTIONS:\n1. Return ONLY valid JSON\n2. No markdown code blocks (no ```)\n3. No introductory text\n4. Start directly with {\n5. End directly with }\n\nReturn this EXACT structure with your analysis:\n{\n  \"soft_skills\": {\n    \"communication\": {\n      \"score\": 7,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"discipline\": {\n      \"score\": 8,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"curiosity\": {\n      \"score\": 6,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"collaboration\": {\n      \"score\": 7,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"ownership\": {\n      \"score\": 8,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"leadership\": {\n      \"score\": 7,\n      \"evidence\": \"Your evidence here\"\n    }\n  },\n  \"overall_score\": 7.2,\n  \"top_strength\": \"leadership\",\n  \"main_weakness\": \"curiosity\",\n  \"summary\": \"Two sentence summary of the candidate.\",\n  \"source\": \"CV\"\n}\n\nCV Text to analyze:\n{{ $json.cv_text }}",
+                    "batching": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.chainLlm",
+                "typeVersion": 1.9,
+                "position": [
+                    624,
+                    208
+                ],
+                "id": "f537a9e0-1b87-463f-9062-ccf70093b4b2",
+                "name": "Basic LLM Chain"
+            },
+            {
+                "parameters": {
+                    "model": "llama3.2:latest",
+                    "options": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+                "typeVersion": 1,
+                "position": [
+                    736,
+                    464
+                ],
+                "id": "4be70d3f-1ba9-4546-ae32-4dfc302df663",
+                "name": "Ollama Chat Model",
+                "credentials": {
+                    "ollamaApi": {
+                        "id": "HpuPylA5HQ3YuNY7",
+                        "name": "Ollama account 2"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "cv-upload",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2.1,
+                "position": [
+                    144,
+                    240
+                ],
+                "id": "002c21fd-bf8b-4876-91c2-b7a4fe8e0bbe",
+                "name": "Webhook",
+                "webhookId": "5f60ecdb-b90e-4b3a-9a8a-327a7c162206"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const formData = $input.first().json;\nconst binaryData = $input.first().binary;\n\nconst fs = require('fs');\nconst http = require('http');\n\nlet fileBuffer;\n\n// Try to get file from form\nif (binaryData) {\n  const fieldName = Object.keys(binaryData)[0];\n  const fileData = binaryData[fieldName];\n  const tempBuffer = Buffer.from(fileData.data, 'base64');\n  \n  if (tempBuffer.length > 100) {\n    // Real file received\n    fileBuffer = tempBuffer;\n    fs.writeFileSync('/tmp/current_cv.pdf', fileBuffer);\n  } else {\n    // n8n truncated the file - read from disk\n    fileBuffer = fs.readFileSync('/tmp/current_cv.pdf');\n  }\n} else {\n  fileBuffer = fs.readFileSync('/tmp/current_cv.pdf');\n}\n\nconst body = JSON.stringify({ base64: fileBuffer.toString('base64') });\n\nconst rawResponse = await new Promise((resolve, reject) => {\n  const req = http.request({\n    hostname: 'localhost',\n    port: 3001,\n    path: '/extract',\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'Content-Length': Buffer.byteLength(body)\n    }\n  }, (res) => {\n    let data = '';\n    res.on('data', chunk => data += chunk);\n    res.on('end', () => resolve(data));\n  });\n  req.on('error', reject);\n  req.write(body);\n  req.end();\n});\n\nconst result = JSON.parse(rawResponse);\nconst cvText = result.text || '';\n\nreturn [{\n  json: {\n    full_name: formData.full_name || formData['Full Name'] || 'Unknown',\n    email: formData.email || '',\n    github: formData.github || '',\n    cv_text: cvText.substring(0, 8000),\n    char_count: cvText.length,\n    pages: result.pages || 1,\n    source: 'CV'\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    352,
+                    240
+                ],
+                "id": "3a62f871-96a0-4616-8027-fb6b4c93511e",
+                "name": "Code in JavaScript1"
+            },
+            {
+                "parameters": {
+                    "respondWith": "allIncomingItems",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.5,
+                "position": [
+                    992,
+                    208
+                ],
+                "id": "56696f62-51b0-42a1-a523-9fe3942b157d",
+                "name": "Respond to Webhook"
+            }
+        ],
+        "connections": {
+            "Ollama Chat Model": {
+                "ai_languageModel": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "ai_languageModel",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Code in JavaScript1",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Code in JavaScript1": {
+                "main": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Basic LLM Chain": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate",
+            "availableInMCP": false
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "ec8e35b2-ac27-4643-adea-9982fe0eea46",
+        "activeVersionId": "05fdd949-ee0e-4730-9287-aaa98817aece",
+        "versionCounter": 240,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-03-13T03:31:28.679Z",
+                "createdAt": "2026-03-13T03:31:28.679Z",
+                "role": "workflow:owner",
+                "workflowId": "3GtwRM6gFdZEghnL",
+                "projectId": "IAa9yZAUV6a9JJWQ",
+                "project": {
+                    "updatedAt": "2026-03-13T02:11:48.069Z",
+                    "createdAt": "2026-03-13T02:10:19.257Z",
+                    "id": "IAa9yZAUV6a9JJWQ",
+                    "name": "Wael Barouni <barouniwael@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "682088f5-4f9f-45ab-9027-c5e288a70089"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    },
+    {
+        "updatedAt": "2026-03-15T02:22:06.765Z",
+        "createdAt": "2026-03-14T00:49:19.085Z",
+        "id": "sBRA1eDa5dzz2kAh",
+        "name": "test PCM",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "jsCode": "// Get data from webhook body\nconst body = $input.first().json.body || $input.first().json;\n\nconst userName = body['Votre nom complet'] || body.user_name || \"Anonymous\";\n\n// Extract question responses (Q1-Q18)\nconst q1  = Number(body.q1  || body['Q1']  || 0);\nconst q2  = Number(body.q2  || body['Q2']  || 0);\nconst q3  = Number(body.q3  || body['Q3']  || 0);\nconst q4  = Number(body.q4  || body['Q4']  || 0);\nconst q5  = Number(body.q5  || body['Q5']  || 0);\nconst q6  = Number(body.q6  || body['Q6']  || 0);\nconst q7  = Number(body.q7  || body['Q7']  || 0);\nconst q8  = Number(body.q8  || body['Q8']  || 0);\nconst q9  = Number(body.q9  || body['Q9']  || 0);\nconst q10 = Number(body.q10 || body['Q10'] || 0);\nconst q11 = Number(body.q11 || body['Q11'] || 0);\nconst q12 = Number(body.q12 || body['Q12'] || 0);\nconst q13 = Number(body.q13 || body['Q13'] || 0);\nconst q14 = Number(body.q14 || body['Q14'] || 0);\nconst q15 = Number(body.q15 || body['Q15'] || 0);\nconst q16 = Number(body.q16 || body['Q16'] || 0);\nconst q17 = Number(body.q17 || body['Q17'] || 0);\nconst q18 = Number(body.q18 || body['Q18'] || 0);\n\n// Calculate scores\nconst scores = {\n  communication: Math.round((q1 + q2 + q3) / 3 * 10) / 10,\n  discipline:    Math.round((q4 + q5 + q6) / 3 * 10) / 10,\n  curiosity:     Math.round((q7 + q8 + q9) / 3 * 10) / 10,\n  collaboration: Math.round((q10 + q11 + q12) / 3 * 10) / 10,\n  ownership:     Math.round((q13 + q14 + q15) / 3 * 10) / 10,\n  leadership:    Math.round((q16 + q17 + q18) / 3 * 10) / 10\n};\n\nconst overall = Math.round(\n  Object.values(scores).reduce((a, b) => a + b, 0) / 6 * 10\n) / 10;\n\nconst skillsArray = Object.entries(scores).map(([skill, score]) => ({ skill, score }));\nskillsArray.sort((a, b) => b.score - a.score);\n\nconst result = {\n  user_name: userName,\n  timestamp: new Date().toISOString(),\n  soft_skills: {\n    communication: { score: scores.communication, evidence: \"Self-assessment via PCM test\" },\n    discipline:    { score: scores.discipline,    evidence: \"Self-assessment via PCM test\" },\n    curiosity:     { score: scores.curiosity,     evidence: \"Self-assessment via PCM test\" },\n    collaboration: { score: scores.collaboration, evidence: \"Self-assessment via PCM test\" },\n    ownership:     { score: scores.ownership,     evidence: \"Self-assessment via PCM test\" },\n    leadership:    { score: scores.leadership,    evidence: \"Self-assessment via PCM test\" }\n  },\n  overall_score: overall,\n  top_strength: skillsArray[0].skill,\n  main_weakness: skillsArray[skillsArray.length - 1].skill,\n  source: \"PCM\",\n  raw_responses: { q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18 }\n};\n\nreturn [{ json: result }];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    416,
+                    0
+                ],
+                "id": "b4b152e0-8440-49c6-af72-2b6ba371274f",
+                "name": "Code in JavaScript"
+            },
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "pcm-test",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2.1,
+                "position": [
+                    208,
+                    0
+                ],
+                "id": "55f09bb1-3d46-402d-8a84-e07efc8da02d",
+                "name": "Webhook",
+                "webhookId": "62ee5d30-b7ed-446a-8821-f46708ee3be1"
+            },
+            {
+                "parameters": {
+                    "respondWith": "allIncomingItems",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.5,
+                "position": [
+                    624,
+                    0
+                ],
+                "id": "be637bc3-1bfe-49d4-b128-0a81d7940392",
+                "name": "Respond to Webhook"
+            }
+        ],
+        "connections": {
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Code in JavaScript",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Code in JavaScript": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate",
+            "availableInMCP": false
+        },
+        "staticData": null,
+        "meta": null,
+        "pinData": {
+            "Code in JavaScript": [
+                {
+                    "json": {
+                        "user_name": "rahma",
+                        "timestamp": "2026-03-14T01:15:53.741Z",
+                        "soft_skills": {
+                            "communication": {
+                                "score": 6,
+                                "evidence": "Self-assessment via PCM test"
+                            },
+                            "discipline": {
+                                "score": 3,
+                                "evidence": "Self-assessment via PCM test"
+                            },
+                            "curiosity": {
+                                "score": 5,
+                                "evidence": "Self-assessment via PCM test"
+                            },
+                            "collaboration": {
+                                "score": 6.3,
+                                "evidence": "Self-assessment via PCM test"
+                            },
+                            "ownership": {
+                                "score": 6.3,
+                                "evidence": "Self-assessment via PCM test"
+                            },
+                            "leadership": {
+                                "score": 4.3,
+                                "evidence": "Self-assessment via PCM test"
+                            }
+                        },
+                        "overall_score": 5.2,
+                        "top_strength": "collaboration",
+                        "main_weakness": "discipline",
+                        "source": "PCM",
+                        "raw_responses": {
+                            "q1": 4,
+                            "q2": 5,
+                            "q3": 9,
+                            "q4": 8,
+                            "q5": 0,
+                            "q6": 1,
+                            "q7": 6,
+                            "q8": 0,
+                            "q9": 9,
+                            "q10": 9,
+                            "q11": 9,
+                            "q12": 1,
+                            "q13": 8,
+                            "q14": 5,
+                            "q15": 6,
+                            "q16": 5,
+                            "q17": 4,
+                            "q18": 4
+                        }
+                    }
+                }
+            ]
+        },
+        "versionId": "a08602a9-28df-4c64-b077-49f0505fadb6",
+        "activeVersionId": "a08602a9-28df-4c64-b077-49f0505fadb6",
+        "versionCounter": 103,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-03-14T00:49:19.091Z",
+                "createdAt": "2026-03-14T00:49:19.091Z",
+                "role": "workflow:owner",
+                "workflowId": "sBRA1eDa5dzz2kAh",
+                "projectId": "IAa9yZAUV6a9JJWQ",
+                "project": {
+                    "updatedAt": "2026-03-13T02:11:48.069Z",
+                    "createdAt": "2026-03-13T02:10:19.257Z",
+                    "id": "IAa9yZAUV6a9JJWQ",
+                    "name": "Wael Barouni <barouniwael@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "682088f5-4f9f-45ab-9027-c5e288a70089"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": "Version a08602a9",
+            "description": ""
+        }
+    },
+    {
+        "updatedAt": "2026-03-23T15:06:49.975Z",
+        "createdAt": "2026-03-14T02:14:01.299Z",
+        "id": "V7i9vITXrK8sNsG8",
+        "name": "master soft skills agent",
+        "description": null,
+        "active": true,
+        "isArchived": false,
+        "nodes": [
+            {
+                "parameters": {
+                    "formTitle": "Complete Soft Skills Analysis",
+                    "formDescription": "Get a comprehensive soft skills analysis from CV, GitHub, and personality test",
+                    "formFields": {
+                        "values": [
+                            {
+                                "fieldLabel": "Full Name",
+                                "requiredField": true
+                            },
+                            {
+                                "fieldLabel": "Email Address",
+                                "fieldType": "email",
+                                "requiredField": true
+                            },
+                            {
+                                "fieldLabel": "CV File",
+                                "fieldType": "file",
+                                "requiredField": true
+                            },
+                            {
+                                "fieldLabel": "GitHub Username"
+                            }
+                        ]
+                    },
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.formTrigger",
+                "typeVersion": 2.5,
+                "position": [
+                    -1168,
+                    96
+                ],
+                "id": "c732607b-d2ba-4f4a-b358-a06c8e3b216e",
+                "name": "On form submission",
+                "webhookId": "d8611202-eb98-4c19-bcb0-8d237258b7b1",
+                "disabled": true
+            },
+            {
+                "parameters": {
+                    "jsCode": "const body = $input.first().json.body || $input.first().json;\nconst binaryData = $input.first().binary;\n\nconst userName = body.full_name || 'Unknown';\nconst userEmail = body.email || '';\nconst githubUsername = body.github_username || '';\n\nconst http = require('http');\nconst fs = require('fs');\n\nfunction httpPost(path, data) {\n  return new Promise((resolve, reject) => {\n    const reqBody = JSON.stringify(data);\n    const req = http.request({\n      hostname: 'localhost',\n      port: 5678,\n      path: path,\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'Content-Length': Buffer.byteLength(reqBody)\n      }\n    }, (res) => {\n      let d = '';\n      res.on('data', chunk => d += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(d)); }\n        catch(e) { resolve({error: d}); }\n      });\n    });\n    req.on('error', reject);\n    req.write(reqBody);\n    req.end();\n  });\n}\n\n// STEP 1 — Extract CV text from PDF\nlet cvAnalysis = {\n  soft_skills: {\n    communication: {score: 7, evidence: 'CV not provided'},\n    discipline:    {score: 7, evidence: 'CV not provided'},\n    curiosity:     {score: 7, evidence: 'CV not provided'},\n    collaboration: {score: 7, evidence: 'CV not provided'},\n    ownership:     {score: 7, evidence: 'CV not provided'},\n    leadership:    {score: 7, evidence: 'CV not provided'}\n  },\n  overall_score: 7,\n  source: 'CV'\n};\n\nif (binaryData && Object.keys(binaryData).length > 0) {\n  try {\n    const fieldName = Object.keys(binaryData)[0];\n    const fileData = binaryData[fieldName];\n    const pdfBuffer = Buffer.from(fileData.data, 'base64');\n    fs.writeFileSync('/tmp/master_cv.pdf', pdfBuffer);\n    const fileBuffer = fs.readFileSync('/tmp/master_cv.pdf');\n\n    const extractBody = JSON.stringify({ base64: fileBuffer.toString('base64') });\n    const cvText = await new Promise((resolve, reject) => {\n      const req = http.request({\n        hostname: 'localhost', port: 3001, path: '/extract',\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Content-Length': Buffer.byteLength(extractBody)\n        }\n      }, (res) => {\n        let d = '';\n        res.on('data', c => d += c);\n        res.on('end', () => {\n          try { resolve(JSON.parse(d)); }\n          catch(e) { resolve({text: ''}); }\n        });\n      });\n      req.on('error', () => resolve({text: ''}));\n      req.write(extractBody);\n      req.end();\n    });\n\n    if (cvText.text && cvText.text.length > 50) {\n      const cvResult = await httpPost('/webhook/cv-upload-text', {\n        full_name: userName,\n        cv_text: cvText.text\n      });\n      if (cvResult && cvResult.soft_skills) {\n        cvAnalysis = cvResult;\n        cvAnalysis.source = 'CV';\n      }\n    }\n  } catch(e) {\n    cvAnalysis.error = e.message;\n  }\n}\n\n// STEP 2 — GitHub Analysis\nlet githubAnalysis = {\n  soft_skills: {\n    communication: {score: 5, evidence: 'No GitHub provided'},\n    discipline:    {score: 5, evidence: 'No GitHub provided'},\n    curiosity:     {score: 5, evidence: 'No GitHub provided'},\n    collaboration: {score: 5, evidence: 'No GitHub provided'},\n    ownership:     {score: 5, evidence: 'No GitHub provided'},\n    leadership:    {score: 5, evidence: 'No GitHub provided'}\n  },\n  overall_score: 5,\n  source: 'GitHub'\n};\n\nif (githubUsername) {\n  try {\n    const ghResult = await httpPost('/webhook/github-analyze', {\n      github_username: githubUsername\n    });\n    if (ghResult && !ghResult.error) {\n      githubAnalysis = ghResult;\n      githubAnalysis.source = 'GitHub';\n    }\n  } catch(e) {\n    githubAnalysis.error = e.message;\n  }\n}\n\n// STEP 3 — PCM scores from form\n// ✅ FIX: correction de la syntaxe communication + evidence ajouté\nconst pcmResult = {\n  soft_skills: {\n    communication: {score: Math.round((Number(body.q1||5)+Number(body.q2||5)+Number(body.q3||5))/3*10)/10,  evidence: 'Self-assessment PCM'},\n    discipline:    {score: Math.round((Number(body.q4||5)+Number(body.q5||5)+Number(body.q6||5))/3*10)/10,  evidence: 'Self-assessment PCM'},\n    curiosity:     {score: Math.round((Number(body.q7||5)+Number(body.q8||5)+Number(body.q9||5))/3*10)/10,  evidence: 'Self-assessment PCM'},\n    collaboration: {score: Math.round((Number(body.q10||5)+Number(body.q11||5)+Number(body.q12||5))/3*10)/10, evidence: 'Self-assessment PCM'},\n    ownership:     {score: Math.round((Number(body.q13||5)+Number(body.q14||5)+Number(body.q15||5))/3*10)/10, evidence: 'Self-assessment PCM'},\n    leadership:    {score: Math.round((Number(body.q16||5)+Number(body.q17||5)+Number(body.q18||5))/3*10)/10, evidence: 'Self-assessment PCM'}\n  },\n  overall_score: Math.round((\n    Number(body.q1||5)+Number(body.q2||5)+Number(body.q3||5)+\n    Number(body.q4||5)+Number(body.q5||5)+Number(body.q6||5)+\n    Number(body.q7||5)+Number(body.q8||5)+Number(body.q9||5)+\n    Number(body.q10||5)+Number(body.q11||5)+Number(body.q12||5)+\n    Number(body.q13||5)+Number(body.q14||5)+Number(body.q15||5)+\n    Number(body.q16||5)+Number(body.q17||5)+Number(body.q18||5)\n  )/18*10)/10,\n  source: 'PCM'\n};\n\n// STEP 4 — Weighted merge\nconst weights = { cv: 0.4, github: 0.3, pcm: 0.3 };\n\nfunction getScore(analysis, skill) {\n  return analysis?.soft_skills?.[skill]?.score || 5;\n}\n\nfunction weightedScore(skill) {\n  const cv  = getScore(cvAnalysis, skill);\n  const gh  = getScore(githubAnalysis, skill);\n  const pcm = getScore(pcmResult, skill);\n  return Math.round((cv*weights.cv + gh*weights.github + pcm*weights.pcm) * 10) / 10;\n}\n\nconst mergedScores = {\n  communication: weightedScore('communication'),\n  discipline:    weightedScore('discipline'),\n  curiosity:     weightedScore('curiosity'),\n  collaboration: weightedScore('collaboration'),\n  ownership:     weightedScore('ownership'),\n  leadership:    weightedScore('leadership')\n};\n\nconst overallScore = Math.round(\n  Object.values(mergedScores).reduce((a,b) => a+b, 0) / 6 * 10\n) / 10;\n\nconst skillsArray = Object.entries(mergedScores)\n  .map(([skill, score]) => ({skill, score}))\n  .sort((a,b) => b.score - a.score);\n\n// ✅ FIX: source_data retourne les scores simples pour l'affichage frontend\nreturn [{\n  json: {\n    user_name:          userName,\n    user_email:         userEmail,\n    github_username:    githubUsername,\n    timestamp:          new Date().toISOString(),\n    merged_soft_skills: mergedScores,\n    overall_score:      overallScore,\n    top_3_strengths:    skillsArray.slice(0,3).map(s => s.skill),\n    top_3_weaknesses:   skillsArray.slice(-3).map(s => s.skill).reverse(),\n    source_data: {\n      cv:     { overall_score: cvAnalysis.overall_score     || 7 },\n      github: { overall_score: githubAnalysis.overall_score || 5 },\n      pcm:    { overall_score: pcmResult.overall_score      || 5 }\n    },\n    weights_applied: weights\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    208,
+                    0
+                ],
+                "id": "64bdb7d5-a88b-473f-a92b-098fa039e540",
+                "name": "Code in JavaScript"
+            },
+            {
+                "parameters": {
+                    "promptType": "define",
+                    "text": "=You are an expert HR analyst specializing in PCM (Process Communication Model) personality assessment.\n\nYou have received soft skills data from 3 sources:\n1. CV analysis (40% weight)\n2. GitHub profile analysis (30% weight)  \n3. PCM personality test (30% weight)\n\nAnalyze this merged data and determine the candidate's PCM personality type from these 6 types:\n- Analyseur: Logical, structured and organized. Values facts and data.\n- Persévérant: Observant, committed and conscientious. Values opinions and beliefs.\n- Empathique: Warm, sensitive and compassionate. Values emotions and feelings.\n- Énergiseur: Spontaneous, creative and playful. Values reactions and fun.\n- Imagineur: Calm, imaginative and reflective. Values introspection and solitude.\n- Promoteur: Adaptable, charming and direct. Values action and results.\n\nData to analyze:\n{{ $json }}\n\nReturn ONLY valid JSON with exactly this structure, no code, no explanation, no markdown:\n{\n  \"summary\": \"2-3 sentence overall assessment\",\n  \"personality_type\": \"One of: Analyseur | Persévérant | Empathique | Énergiseur | Imagineur | Promoteur\",\n  \"personality_description\": \"1 sentence explaining why this personality type fits this candidate\",\n  \"key_strengths\": [\"strength 1\", \"strength 2\", \"strength 3\"],\n  \"key_weaknesses\": [\"weakness 1\", \"weakness 2\", \"weakness 3\"],\n  \"training_recommendations\": {\n    \"weakness_1\": \"Specific training program recommendation\",\n    \"weakness_2\": \"Specific training program recommendation\",\n    \"weakness_3\": \"Specific training program recommendation\"\n  },\n  \"career_advice\": \"Career development suggestions based on strengths and personality type\"\n}",
+                    "batching": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.chainLlm",
+                "typeVersion": 1.9,
+                "position": [
+                    416,
+                    0
+                ],
+                "id": "a7b2c837-05d5-4cc7-aeaa-2cc3ca1c7ddb",
+                "name": "Basic LLM Chain"
+            },
+            {
+                "parameters": {
+                    "model": "llama3.2:latest",
+                    "options": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+                "typeVersion": 1,
+                "position": [
+                    352,
+                    208
+                ],
+                "id": "11bec62f-7e4b-4248-8160-18ec86272dcd",
+                "name": "Ollama Chat Model",
+                "credentials": {
+                    "ollamaApi": {
+                        "id": "HpuPylA5HQ3YuNY7",
+                        "name": "Ollama account 2"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "master-agent",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2.1,
+                "position": [
+                    -16,
+                    0
+                ],
+                "id": "5cea8858-9377-4542-b685-b9c53bde15c4",
+                "name": "Webhook",
+                "webhookId": "ee242873-5fff-4938-b6fa-5a962efd8d9b"
+            },
+            {
+                "parameters": {
+                    "respondWith": "allIncomingItems",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.5,
+                "position": [
+                    736,
+                    16
+                ],
+                "id": "3fcbd79c-843d-455a-9c45-14c79412d230",
+                "name": "Respond to Webhook"
+            }
+        ],
+        "connections": {
+            "On form submission": {
+                "main": [
+                    []
+                ]
+            },
+            "Code in JavaScript": {
+                "main": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Ollama Chat Model": {
+                "ai_languageModel": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "ai_languageModel",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Code in JavaScript",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Basic LLM Chain": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate",
+            "availableInMCP": false
+        },
+        "staticData": null,
+        "meta": {
+            "templateCredsSetupCompleted": true
+        },
+        "pinData": {},
+        "versionId": "ae3a9992-16bc-42d5-a545-fdce62b852ed",
+        "activeVersionId": "ae3a9992-16bc-42d5-a545-fdce62b852ed",
+        "versionCounter": 65,
+        "triggerCount": 1,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-03-14T02:14:01.304Z",
+                "createdAt": "2026-03-14T02:14:01.304Z",
+                "role": "workflow:owner",
+                "workflowId": "V7i9vITXrK8sNsG8",
+                "projectId": "IAa9yZAUV6a9JJWQ",
+                "project": {
+                    "updatedAt": "2026-03-13T02:11:48.069Z",
+                    "createdAt": "2026-03-13T02:10:19.257Z",
+                    "id": "IAa9yZAUV6a9JJWQ",
+                    "name": "Wael Barouni <barouniwael@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "682088f5-4f9f-45ab-9027-c5e288a70089"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": "Version ae3a9992",
+            "description": ""
+        }
+    },
+    {
+        "updatedAt": "2026-03-18T23:32:39.000Z",
+        "createdAt": "2026-03-18T23:30:10.907Z",
+        "id": "836HSFv8G57JWjJO",
+        "name": "cv parser",
+        "description": null,
+        "active": false,
+        "isArchived": true,
+        "nodes": [
+            {
+                "parameters": {
+                    "promptType": "define",
+                    "text": "=You are an expert HR analyst specialized in soft skills evaluation from CVs.\n\nAnalyze this CV text and evaluate the person's soft skills based on:\n- Their work experience descriptions\n- Their responsibilities and achievements\n- Their communication style in the CV\n- Their demonstrated leadership, teamwork, and initiative\n\nCRITICAL INSTRUCTIONS:\n1. Return ONLY valid JSON\n2. No markdown code blocks (no ```)\n3. No introductory text\n4. Start directly with {\n5. End directly with }\n\nReturn this EXACT structure with your analysis:\n{\n  \"soft_skills\": {\n    \"communication\": {\n      \"score\": 7,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"discipline\": {\n      \"score\": 8,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"curiosity\": {\n      \"score\": 6,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"collaboration\": {\n      \"score\": 7,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"ownership\": {\n      \"score\": 8,\n      \"evidence\": \"Your evidence here\"\n    },\n    \"leadership\": {\n      \"score\": 7,\n      \"evidence\": \"Your evidence here\"\n    }\n  },\n  \"overall_score\": 7.2,\n  \"top_strength\": \"leadership\",\n  \"main_weakness\": \"curiosity\",\n  \"summary\": \"Two sentence summary of the candidate.\",\n  \"source\": \"CV\"\n}\n\nCV Text to analyze:\n{{ $json.cv_text }}",
+                    "batching": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.chainLlm",
+                "typeVersion": 1.9,
+                "position": [
+                    -32,
+                    0
+                ],
+                "id": "4fae29ca-22ce-49ea-bc9a-a73a576a6996",
+                "name": "Basic LLM Chain"
+            },
+            {
+                "parameters": {
+                    "model": "llama3.2:latest",
+                    "options": {}
+                },
+                "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+                "typeVersion": 1,
+                "position": [
+                    40,
+                    224
+                ],
+                "id": "89a22cd0-acc5-4811-ade6-446e7e00332b",
+                "name": "Ollama Chat Model",
+                "credentials": {
+                    "ollamaApi": {
+                        "id": "HpuPylA5HQ3YuNY7",
+                        "name": "Ollama account 2"
+                    }
+                }
+            },
+            {
+                "parameters": {
+                    "httpMethod": "POST",
+                    "path": "cv-upload",
+                    "responseMode": "responseNode",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.webhook",
+                "typeVersion": 2.1,
+                "position": [
+                    -480,
+                    0
+                ],
+                "id": "e444655a-28ba-4180-a0f1-619a2548b4cb",
+                "name": "Webhook",
+                "webhookId": "5f60ecdb-b90e-4b3a-9a8a-327a7c162206"
+            },
+            {
+                "parameters": {
+                    "jsCode": "const formData = $input.first().json;\nconst binaryData = $input.first().binary;\n\nconst fs = require('fs');\nconst http = require('http');\n\nlet fileBuffer;\n\n// Try to get file from form\nif (binaryData) {\n  const fieldName = Object.keys(binaryData)[0];\n  const fileData = binaryData[fieldName];\n  const tempBuffer = Buffer.from(fileData.data, 'base64');\n  \n  if (tempBuffer.length > 100) {\n    // Real file received\n    fileBuffer = tempBuffer;\n    fs.writeFileSync('/tmp/current_cv.pdf', fileBuffer);\n  } else {\n    // n8n truncated the file - read from disk\n    fileBuffer = fs.readFileSync('/tmp/current_cv.pdf');\n  }\n} else {\n  fileBuffer = fs.readFileSync('/tmp/current_cv.pdf');\n}\n\nconst body = JSON.stringify({ base64: fileBuffer.toString('base64') });\n\nconst rawResponse = await new Promise((resolve, reject) => {\n  const req = http.request({\n    hostname: 'localhost',\n    port: 3001,\n    path: '/extract',\n    method: 'POST',\n    headers: {\n      'Content-Type': 'application/json',\n      'Content-Length': Buffer.byteLength(body)\n    }\n  }, (res) => {\n    let data = '';\n    res.on('data', chunk => data += chunk);\n    res.on('end', () => resolve(data));\n  });\n  req.on('error', reject);\n  req.write(body);\n  req.end();\n});\n\nconst result = JSON.parse(rawResponse);\nconst cvText = result.text || '';\n\nreturn [{\n  json: {\n    full_name: formData.full_name || formData['Full Name'] || 'Unknown',\n    email: formData.email || '',\n    github: formData.github || '',\n    cv_text: cvText.substring(0, 8000),\n    char_count: cvText.length,\n    pages: result.pages || 1,\n    source: 'CV'\n  }\n}];"
+                },
+                "type": "n8n-nodes-base.code",
+                "typeVersion": 2,
+                "position": [
+                    -256,
+                    0
+                ],
+                "id": "1d554451-b597-46f2-80bc-0d06ba27f2f6",
+                "name": "Code in JavaScript1"
+            },
+            {
+                "parameters": {
+                    "respondWith": "allIncomingItems",
+                    "options": {}
+                },
+                "type": "n8n-nodes-base.respondToWebhook",
+                "typeVersion": 1.5,
+                "position": [
+                    320,
+                    0
+                ],
+                "id": "eba1ab1a-a696-412e-bdd2-66319bb975af",
+                "name": "Respond to Webhook"
+            }
+        ],
+        "connections": {
+            "Ollama Chat Model": {
+                "ai_languageModel": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "ai_languageModel",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Webhook": {
+                "main": [
+                    [
+                        {
+                            "node": "Code in JavaScript1",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Code in JavaScript1": {
+                "main": [
+                    [
+                        {
+                            "node": "Basic LLM Chain",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            },
+            "Basic LLM Chain": {
+                "main": [
+                    [
+                        {
+                            "node": "Respond to Webhook",
+                            "type": "main",
+                            "index": 0
+                        }
+                    ]
+                ]
+            }
+        },
+        "settings": {
+            "executionOrder": "v1",
+            "binaryMode": "separate",
+            "availableInMCP": false
+        },
+        "staticData": null,
+        "meta": null,
+        "pinData": {},
+        "versionId": "34f51c80-5eef-4252-a6a1-ad92c1e3cf6f",
+        "activeVersionId": null,
+        "versionCounter": 3,
+        "triggerCount": 0,
+        "tags": [],
+        "shared": [
+            {
+                "updatedAt": "2026-03-18T23:30:10.921Z",
+                "createdAt": "2026-03-18T23:30:10.921Z",
+                "role": "workflow:owner",
+                "workflowId": "836HSFv8G57JWjJO",
+                "projectId": "IAa9yZAUV6a9JJWQ",
+                "project": {
+                    "updatedAt": "2026-03-13T02:11:48.069Z",
+                    "createdAt": "2026-03-13T02:10:19.257Z",
+                    "id": "IAa9yZAUV6a9JJWQ",
+                    "name": "Wael Barouni <barouniwael@gmail.com>",
+                    "type": "personal",
+                    "icon": null,
+                    "description": null,
+                    "creatorId": "682088f5-4f9f-45ab-9027-c5e288a70089"
+                }
+            }
+        ],
+        "versionMetadata": {
+            "name": null,
+            "description": null
+        }
+    }
+]

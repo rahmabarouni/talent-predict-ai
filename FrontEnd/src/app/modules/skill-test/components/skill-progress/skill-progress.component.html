@@ -1,0 +1,174 @@
+<div class="progress-page" id="pdf-content">
+  <header class="hero-card">
+    <div class="hero-copy">
+      <p class="eyebrow">Skill Intelligence</p>
+      <h1>Progression & benchmark</h1>
+      <p>
+        Analyse continue de vos sessions techniques avec un benchmark visuel par competence.
+      </p>
+    </div>
+
+    <div class="hero-actions">
+      <div class="tab-toggle">
+        <button [class.active]="activeTab === 'TECH'" (click)="setTab('TECH')">Tech Skills</button>
+        <button [class.active]="activeTab === 'SOFT'" (click)="setTab('SOFT')">Soft Skills</button>
+      </div>
+
+      <div class="action-buttons">
+        <button type="button" (click)="exportPdf()" [disabled]="exportingPdf" class="btn-export">
+          <span class="icon">📄</span>
+          {{ exportingPdf ? 'Génération...' : 'Exporter rapport PDF' }}
+        </button>
+
+        <div class="dropdown-wrapper">
+          <button (click)="toggleTestOptions()" class="btn-new-test">
+            Nouveau test <span class="arrow">▾</span>
+          </button>
+
+          @if (showTestOptions) {
+            <div class="dropdown-menu">
+              <a routerLink="/skill-test" class="menu-item" (click)="showTestOptions = false">
+                <strong>Test Technique</strong>
+                <span>QCM & Challenge Code</span>
+              </a>
+              <a routerLink="/evaluation/pcm" class="menu-item" (click)="showTestOptions = false">
+                <strong>Test Soft Skills</strong>
+                <span>Personnalité & IA Behavioral</span>
+              </a>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="metrics-grid">
+    <article class="metric-card">
+      <span>Sessions total</span>
+      <strong>{{ progress.length }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Score moyen</span>
+      <strong>{{ averageScore }}%</strong>
+    </article>
+    <article class="metric-card">
+      <span>Taux de validation</span>
+      <strong>{{ passRate }}%</strong>
+    </article>
+    <article class="metric-card accent">
+      <span>Percentile global</span>
+      <strong>{{ overallPercentile }}e</strong>
+      @if (overallPercentile > 0) {
+        <small>{{ percentileLabel(overallPercentile) }}</small>
+      }
+    </article>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <div>
+        <h2>Sessions de test</h2>
+        <p>Historique complet de vos evaluations recentes.</p>
+      </div>
+      <a routerLink="/dashboard" class="text-link">Retour dashboard</a>
+    </div>
+
+    @if (loadingProgress) {
+      <div class="state-box">Chargement des sessions...</div>
+    }
+    @if (!loadingProgress && progressError) {
+      <div class="state-box error">{{ progressError }}</div>
+    }
+
+    @if (!loadingProgress && !progressError && progress.length > 0) {
+      <ul class="session-list">
+        @for (p of progress; track trackByTakenAt($index, p)) {
+          <li class="session-item">
+            <div class="session-main">
+              <span class="score-pill">{{ p.overall_score }}%</span>
+              <div class="session-meta">
+                <h3>{{ p.taken_at | date:'dd/MM/yyyy HH:mm' }}</h3>
+                <p>{{ formatTestType(p.test_type) }}</p>
+              </div>
+            </div>
+            <div class="session-right">
+              <span class="status-pill" [class.pass]="p.passed" [class.fail]="!p.passed">
+                {{ p.passed ? 'Valide' : 'A renforcer' }}
+              </span>
+              @if (skillEntries(p).length > 0) {
+                <div class="skill-chips">
+                  @for (entry of skillEntries(p); track entry) {
+                    <span>
+                      {{ entry.skill }} {{ entry.score }}%
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (!loadingProgress && !progressError && progress.length === 0) {
+      <div class="state-box">
+        Aucune session de test n'est disponible pour le moment.
+      </div>
+    }
+  </section>
+
+  <section class="panel benchmark-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Benchmark detaille</h2>
+        <p>Comparaison entre votre score, la moyenne et le niveau top 10%.</p>
+      </div>
+      @if (overallPercentile > 0) {
+        <span class="overall-tag">Percentile {{ overallPercentile }}e</span>
+      }
+    </div>
+
+    @if (loadingBenchmark) {
+      <div class="state-box">Chargement du benchmark...</div>
+    }
+    @if (!loadingBenchmark && benchmarkError) {
+      <div class="state-box error">{{ benchmarkError }}</div>
+    }
+
+    @if (!loadingBenchmark && !benchmarkError && benchmarkRows.length > 0) {
+      <div class="benchmark-list">
+        @for (row of benchmarkRows; track trackBySkill($index, row)) {
+          <article class="benchmark-item">
+            <header>
+              <div>
+                <h3>{{ row.skill }}</h3>
+                <p>{{ percentileLabel(row.percentile) }} ({{ row.percentile }}e percentile)</p>
+              </div>
+              <strong>{{ row.candidate_score }}</strong>
+            </header>
+            <div class="benchmark-grid">
+              <div class="benchmark-metric">
+                <span class="metric-label">Votre score</span>
+                <app-progress-tracker [progression]="row.candidate_score" />
+              </div>
+              <div class="benchmark-metric">
+                <span class="metric-label">Moyenne globale</span>
+                <app-progress-tracker [progression]="row.avg_score" />
+              </div>
+              <div class="benchmark-metric">
+                <span class="metric-label">Objectif Top 10%</span>
+                <app-progress-tracker [progression]="row.top_10_percent_score" />
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+
+    @if (!loadingBenchmark && !benchmarkError && benchmarkRows.length === 0) {
+      <div class="state-box">
+        Aucun benchmark n'a ete retourne pour le moment.
+      </div>
+    }
+  </section>
+</div>

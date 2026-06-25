@@ -1,0 +1,87 @@
+<div class="auth-page">
+  <div class="auth-left">
+    <div class="brand-section">
+      <div class="brand-logo">
+        <img src="favicon.ico" alt="TalentPredict logo" width="58" height="58" />
+      </div>
+      <h1 class="brand-title">Vérification E-mail</h1>
+      <p class="brand-subtitle">Protégez votre compte et activez votre accès.</p>
+      <div class="brand-features">
+        <div class="feature">
+          <span class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+          </span>
+          <span>Connexion sécurisée</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </span>
+          <span>Protection contre les accès frauduleux</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-card">
+      <div class="auth-header">
+        <span class="auth-kicker">Activation Du Compte</span>
+        <h2>Validation de l'adresse e-mail</h2>
+        <p>Confirmez votre e-mail pour finaliser l'activation du compte.</p>
+      </div>
+
+      @if (loading) {
+      <div class="state-box state-loading">
+        <div class="loader"></div>
+        <p>Validation du lien en cours...</p>
+      </div>
+      }
+
+      @if (!loading && message) {
+      <div class="state-box" [class.state-success]="verificationSuccess" [class.state-error]="verificationError" [class.state-info]="!verificationSuccess && !verificationError">
+        <p>{{ message }}</p>
+      </div>
+      }
+
+      <div class="resend-card">
+        <h3>Renvoyer l'e-mail de vérification</h3>
+        <form [formGroup]="resendForm" (ngSubmit)="onResendVerification()">
+          <div class="form-group">
+            <label for="resendEmail" class="form-label">Adresse e-mail</label>
+            <input
+              id="resendEmail"
+              type="email"
+              formControlName="email"
+              class="form-input"
+              placeholder="votre@email.com"
+              [class.input-error]="resendForm.get('email')?.invalid && resendForm.get('email')?.touched"
+            />
+            @if (resendForm.get('email')?.invalid && resendForm.get('email')?.touched) {
+            <span class="form-error">Veuillez entrer un e-mail valide.</span>
+            }
+          </div>
+
+          <button type="submit" class="btn-submit" [disabled]="resending || resendForm.invalid">
+            @if (resending) {
+            <span class="btn-spinner"></span>
+            <span>Envoi en cours...</span>
+            } @else {
+            <span>Renvoyer le lien</span>
+            }
+          </button>
+        </form>
+      </div>
+
+      <div class="auth-footer">
+        <p>
+          <a routerLink="/auth/login">Retour à la connexion</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

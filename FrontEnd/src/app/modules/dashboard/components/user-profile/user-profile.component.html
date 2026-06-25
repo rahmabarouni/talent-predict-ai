@@ -1,0 +1,393 @@
+<div class="profile-container">
+
+  <!-- Profile Header -->
+  <div class="profile-header">
+    <button class="btn-back" (click)="goBack()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+        <line x1="19" y1="12" x2="5" y2="12" />
+        <polyline points="12 19 5 12 12 5" />
+      </svg>
+      Retour
+    </button>
+    <h1>Mon Profil</h1>
+    <div class="header-actions">
+      <button class="btn-security" (click)="goToSecurity()">
+        🔒 Sécurité & Confidentialité
+      </button>
+    </div>
+  </div>
+
+  @if (loading) {
+  <div class="loading-card">
+    <div class="loader"></div>
+    <p>Chargement du profil...</p>
+  </div>
+  }
+
+  @if (error) {
+  <div class="error-banner">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+    <span>{{ error }}</span>
+    <button type="button" class="btn-retry" (click)="loadProfile()">Réessayer</button>
+  </div>
+  }
+
+  @if (profile && !loading) {
+  <div class="profile-content">
+
+    <!-- Hero Card -->
+    <div class="profile-hero">
+      <div class="hero-avatar">
+        @if (getPhotoUrl()) {
+        <img [src]="getPhotoUrl()" [alt]="profile.firstName" class="avatar-img" />
+        } @else {
+        <div class="avatar-placeholder" [style.background]="initialsColor">{{ initials }}</div>
+        }
+      </div>
+      <div class="hero-info">
+        <h2>{{ profile.firstName }} {{ profile.lastName }}</h2>
+        <p class="hero-title">{{ profile.titreProfessionnel || profile.poste || 'Titre non renseigné' }}</p>
+        <p class="hero-email">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+          </svg>
+          {{ profile.email }}
+        </p>
+        <div class="hero-tags">
+          @if (profile.poste) {
+          <span class="tag tag-blue">📌 {{ profile.poste }}</span>
+          }
+          @if (profile.departementEditable) {
+          <span class="tag tag-purple">🏢 {{ profile.departementEditable }}</span>
+          }
+          @if (profile.ville) {
+          <span class="tag tag-teal">📍 {{ profile.ville }}</span>
+          }
+          @if (profile.experienceAns != null) {
+          <span class="tag tag-orange">⭐ {{ profile.experienceAns }} ans d'expérience</span>
+          }
+        </div>
+        <div class="hero-metrics">
+          <div class="metric-card">
+            <span class="metric-label">Niveau d'études</span>
+            <strong>{{ profile.niveauEtudes || 'Non renseigné' }}</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">GitHub</span>
+            <strong>{{ profile.githubRepos }} repos</strong>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">CV</span>
+            <strong>{{ profile.cvUrl ? 'Ajouté ✓' : 'Absent' }}</strong>
+          </div>
+        </div>
+        <div class="social-links">
+          @if (profile.lienLinkedin) {
+          <a [href]="profile.lienLinkedin" target="_blank" class="social-link linkedin">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+              <circle cx="4" cy="4" r="2" />
+            </svg>
+            LinkedIn
+          </a>
+          }
+          @if (profile.githubUrl) {
+          <a [href]="profile.githubUrl" target="_blank" class="social-link github">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path
+                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22" />
+            </svg>
+            GitHub
+          </a>
+          }
+          @if (profile.cvUrl) {
+          <a [href]="getCvUrl()" target="_blank" class="social-link cv">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            Mon CV
+          </a>
+          }
+          @if (profile.portfolioUrl) {
+          <a [href]="profile.portfolioUrl" target="_blank" class="social-link portfolio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            Portfolio
+          </a>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile Completeness Score -->
+    <app-profile-completeness [profile]="profile" />
+
+
+
+    <!-- Crop Modal -->
+    @if (showCropModal) {
+    <div class="preview-overlay">
+      <div class="crop-modal">
+        <div class="preview-header">
+          <h3>✂️ Aperçu de la photo</h3>
+        </div>
+        <div class="crop-body">
+          @if (cropImageSrc) {
+          <img [src]="cropImageSrc" class="crop-preview-img" alt="Aperçu" />
+          }
+          <p class="crop-hint">Vérifiez que votre photo est bien centrée avant de confirmer.</p>
+        </div>
+        <div class="crop-actions">
+          <button type="button" class="btn-reset" (click)="cancelCrop()">Annuler</button>
+          <button type="button" class="btn-save" (click)="confirmCrop()">
+            ✓ Utiliser cette photo
+          </button>
+        </div>
+      </div>
+    </div>
+    }
+
+    <!-- Editable Form -->
+    <div class="edit-card">
+      <div class="card-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+        <h3>Modifier mon profil</h3>
+      </div>
+
+      <div class="form-intro">
+        <p>Complétez votre profil pour obtenir de meilleures analyses IA et une présentation plus claire de votre
+          parcours.</p>
+      </div>
+
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+
+        <!-- Read-only info -->
+        <div class="read-only-section">
+          <p class="section-label">ℹ️ Informations de compte (non modifiables)</p>
+          <div class="readonly-grid">
+            <div class="readonly-item">
+              <span class="readonly-label">Prénom</span>
+              <span class="readonly-value">{{ profile.firstName }}</span>
+            </div>
+            <div class="readonly-item">
+              <span class="readonly-label">Nom</span>
+              <span class="readonly-value">{{ profile.lastName }}</span>
+            </div>
+            <div class="readonly-item">
+              <span class="readonly-label">Email</span>
+              <span class="readonly-value">{{ profile.email }}</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="form-section-title">📷 Photo de profil</p>
+
+        <!-- Photo de profil -->
+        <div class="form-group">
+          <div class="upload-area photo-upload">
+            <div class="photo-preview-wrap">
+              @if (getPhotoUrl()) {
+              <img [src]="getPhotoUrl()" class="photo-preview-img" alt="Aperçu" />
+              } @else {
+              <div class="photo-preview-placeholder" [style.background]="initialsColor">{{ initials }}</div>
+              }
+            </div>
+            <div class="upload-info">
+              <label for="photoInput" class="btn-upload-file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                {{ photoFile ? photoFile.name : 'Choisir une image' }}
+              </label>
+              <input id="photoInput" type="file" accept="image/*" (change)="onPhotoSelected($event)" hidden />
+              <p class="upload-hint">JPG, PNG, WebP — max 10 Mo</p>
+              @if (profile.urlPhoto || photoPreview) {
+              <button type="button" class="btn-remove-photo" (click)="removePhoto()">🗑️ Supprimer la photo</button>
+              }
+            </div>
+          </div>
+        </div>
+
+        <p class="form-section-title">🎯 Profil public</p>
+
+        <div class="form-group">
+          <label for="titreProfessionnel">Titre professionnel</label>
+          <input id="titreProfessionnel" type="text" formControlName="titreProfessionnel"
+            placeholder="Ex: Développeur Full Stack Senior" />
+        </div>
+
+        <!-- Poste et Département — maintenant éditables -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="poste">Poste / Rôle cible</label>
+            <input id="poste" type="text" formControlName="poste" placeholder="Ex: Développeur Full Stack" />
+          </div>
+          <div class="form-group">
+            <label for="departementEditable">Département</label>
+            <select id="departementEditable" formControlName="departementEditable" class="form-select">
+              <option value="">— Sélectionner —</option>
+              @for (dept of DEPARTMENTS; track dept) {
+              <option [value]="dept">{{ dept }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="ville">Ville / Localisation</label>
+          <input id="ville" type="text" formControlName="ville" placeholder="Ex: Tunis, Tunisie" />
+        </div>
+
+
+        <div class="form-group bio-group">
+          <div class="bio-label-row">
+            <label for="description">Bio / Description</label>
+            <button type="button" class="btn-ai-bio" (click)="generateBio()" [disabled]="generatingBio">
+              @if (generatingBio) {
+              <span class="btn-spinner-sm"></span> Génération...
+              } @else {
+              ✨ Générer avec l'IA
+              }
+            </button>
+          </div>
+          <textarea id="description" formControlName="description" rows="4"
+            placeholder="Décrivez votre parcours, vos ambitions... (minimum 20 caractères)"></textarea>
+          <div class="bio-footer">
+            <span class="bio-counter" [class.error]="bioTooShort" [class.ok]="bioLength >= 20">
+              {{ bioLength }} / 20 min
+            </span>
+            @if (bioTooShort) {
+            <span class="field-error">Minimum 20 caractères requis</span>
+            }
+          </div>
+          <span class="field-hint">Astuce: indiquez vos forces, vos technos clés et le type de poste recherché.</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="experienceAns">Années d'expérience</label>
+            <input id="experienceAns" type="number" formControlName="experienceAns" placeholder="0" min="0" max="50" />
+          </div>
+          <div class="form-group">
+            <label for="niveauEtudes">Niveau d'études</label>
+            <input id="niveauEtudes" type="text" formControlName="niveauEtudes"
+              placeholder="Ex: Master, Licence, Baccalauréat" />
+          </div>
+        </div>
+
+        <p class="form-section-title">🔗 Liens et présence en ligne</p>
+
+        <div class="form-group">
+          <label for="lienLinkedin">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+              <circle cx="4" cy="4" r="2" />
+            </svg>
+            LinkedIn URL
+          </label>
+          <input id="lienLinkedin" type="url" formControlName="lienLinkedin"
+            placeholder="https://linkedin.com/in/votre-profil" />
+        </div>
+
+        <div class="form-group">
+          <label for="githubUrl">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path
+                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22" />
+            </svg>
+            GitHub URL
+          </label>
+          <input id="githubUrl" type="url" formControlName="githubUrl" placeholder="https://github.com/votre-profil" />
+        </div>
+
+        <div class="form-group">
+          <label for="portfolioUrl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            Portfolio URL
+          </label>
+          <input id="portfolioUrl" type="url" formControlName="portfolioUrl" placeholder="https://monportfolio.dev" />
+        </div>
+
+        <p class="form-section-title">📄 Documents</p>
+
+        <!-- CV Upload -->
+        <div class="form-group">
+          <label>CV (PDF)</label>
+          <div class="upload-area cv-upload" [class.has-file]="cvFile || profile.cvUrl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="28" height="28"
+              class="upload-icon">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <div class="cv-info">
+              @if (cvFile) {
+              <span class="cv-filename">{{ cvFileName }}</span>
+              <span class="cv-hint">Sera analysé par l'IA lors de la sauvegarde</span>
+              } @else if (profile.cvUrl) {
+              <span class="cv-filename">CV déjà enregistré ✓</span>
+              <span class="cv-hint">Choisir un nouveau fichier pour le remplacer</span>
+              } @else {
+              <span class="cv-filename">Aucun CV sélectionné</span>
+              <span class="cv-hint">PDF — max 10 Mo — sera analysé par l'IA</span>
+              }
+              <label for="cvInput" class="btn-upload-file">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                {{ cvFile ? 'Changer' : 'Choisir un PDF' }}
+              </label>
+              <input id="cvInput" type="file" accept=".pdf" (change)="onCvSelected($event)" hidden />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-reset" (click)="resetForm()" [disabled]="saving">
+            Réinitialiser
+          </button>
+          <button type="submit" class="btn-save" [disabled]="saving">
+            @if (saving) {
+            <div class="btn-spinner"></div>
+            Enregistrement...
+            } @else {
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            Sauvegarder le profil
+            }
+          </button>
+        </div>
+
+        @if (lastUpdated) {
+        <p class="form-last-updated">Dernière mise à jour : {{ formatLastUpdated() }}</p>
+        }
+        <p class="form-save-hint">Vos modifications sont appliquées après la sauvegarde.</p>
+      </form>
+    </div>
+
+  </div>
+  }
+
+</div>

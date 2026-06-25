@@ -1,0 +1,294 @@
+@if (!result) {
+  <div class="assessment-wrap">
+    <header class="hero">
+      <div class="hero-copy">
+        <h1>Evaluation Technique Unifiee</h1>
+        <p>QCM par cartes chronometrees + code challenge aleatoire dans un seul parcours.</p>
+      </div>
+      <div class="hero-stats">
+        <article class="hero-stat">
+          <span>Questions</span>
+          <strong>{{ questions.length }}</strong>
+        </article>
+        <article class="hero-stat">
+          <span>Repondues</span>
+          <strong>{{ answeredCount }}/{{ questions.length }}</strong>
+        </article>
+        <article class="hero-stat">
+          <span>Timer global</span>
+          <strong>{{ formattedOverallTimer }}</strong>
+        </article>
+
+      </div>
+    </header>
+
+
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>1) QCM adaptatif (format cartes)</h2>
+          <p>Une question a la fois. Le timer de question force le rythme reel d entretien.</p>
+        </div>
+        <div class="question-timer" [class.alert]="questionRemainingSec <= 15">
+          <span>Timer question</span>
+          <strong>{{ formattedQuestionTimer }}</strong>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-top">
+          <strong>Question {{ currentIndex + 1 }} / {{ questions.length }}</strong>
+          <span>{{ questionProgressPercent }}% parcours</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" [style.width.%]="questionProgressPercent"></div>
+        </div>
+        <div class="step-row">
+          @for (q of questions; track q.id; let idx = $index) {
+            <button
+              type="button"
+              class="step-dot"
+              [class.active]="idx === currentIndex"
+              [class.done]="!!answers[q.id]"
+              (click)="goToQuestion(idx)"
+              [attr.aria-label]="'Aller a la question ' + (idx + 1)"
+            ></button>
+          }
+        </div>
+      </div>
+
+      @if (currentQuestion; as q) {
+        <article class="question-card solo">
+          <div class="question-top">
+            <span class="question-number">Q{{ currentIndex + 1 }}</span>
+            <div class="question-tags">
+              <span class="tag skill">{{ q.skill }}</span>
+              <span class="tag level">{{ q.difficulty }}</span>
+            </div>
+          </div>
+
+          <p class="question-title">{{ q.question }}</p>
+
+          <div class="options-grid">
+            @for (opt of optionKeys; track opt) {
+              <label class="option-item" [class.active]="answers[q.id] === opt">
+                <input type="radio" [name]="q.id" [value]="opt" [(ngModel)]="answers[q.id]" />
+                <span class="option-key">{{ opt }}</span>
+                <span class="option-text">{{ q.options[opt] }}</span>
+              </label>
+            }
+          </div>
+
+          @if (q.confidence_required) {
+            <div class="confidence-row">
+              <label>Confiance</label>
+              <select [(ngModel)]="confidence[q.id]">
+                <option value="high">Haute</option>
+                <option value="medium">Moyenne</option>
+                <option value="low">Basse</option>
+              </select>
+            </div>
+          }
+
+          <div class="question-nav">
+            <button type="button" class="btn secondary" (click)="previousQuestion()" [disabled]="isFirstQuestion">
+              Precedent
+            </button>
+            <button type="button" class="btn secondary" (click)="nextQuestion()" [disabled]="isLastQuestion">
+              Suivant
+            </button>
+          </div>
+        </article>
+      }
+    </section>
+
+    <section class="panel code-panel">
+      <div class="section-head">
+        <div>
+          <h2>2) Code challenge aleatoire</h2>
+          <p>Evalue votre raisonnement, votre structure de code et votre clarte.</p>
+        </div>
+        @if (randomCodeSkill) {
+          <span class="skill-badge">{{ randomCodeSkill }}</span>
+        }
+      </div>
+
+      @if (codeLoading) {
+        <div class="state-box">Generation du challenge code...</div>
+      }
+
+      @if (!codeLoading && codeError) {
+        <div class="state-box error">{{ codeError }}</div>
+      }
+
+      @if (!codeLoading && codeChallenge) {
+        <div class="code-layout">
+          <div class="challenge-description">
+            <p class="challenge-title">{{ codeChallenge.title ?? 'Challenge' }}</p>
+            <p>{{ codeChallenge.description }}</p>
+            @if (codeChallenge.expected_behavior) {
+              <p class="expected">Attendu: {{ codeChallenge.expected_behavior }}</p>
+            }
+          </div>
+
+          <div class="editor-wrap">
+            <textarea
+              class="code-editor"
+              rows="13"
+              [(ngModel)]="codeSubmission"
+              spellcheck="false"
+              placeholder="Ecrivez votre solution ici..."
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="code-actions">
+          <button type="button" class="btn ghost" (click)="useCodeHint()" [disabled]="codeHintsLeft === 0">
+            Indice ({{ codeHintsLeft }} restant)
+          </button>
+          <span class="hint-note">Les indices reduisent legerement la note de code.</span>
+        </div>
+      }
+    </section>
+
+    <div class="submit-row">
+      <p>
+        Completion: {{ completionPercent }}%. Le score final combine precision QCM, qualite de code et coherence globale.
+      </p>
+      <button class="btn primary" type="button" [disabled]="submitting" (click)="submit()">
+        {{ submitting ? 'Evaluation en cours...' : 'Terminer l evaluation complete' }}
+      </button>
+    </div>
+  </div>
+}
+
+@if (result; as finalResult) {
+  <div class="result-wrap" id="pdf-quiz-result">
+    <header class="result-header">
+      <div class="score-ring" [style.--score]="finalResult.finalScore">
+        <div class="ring-inner" [class.pass]="finalResult.passed" [class.fail]="!finalResult.passed">
+          <span>{{ finalResult.finalScore }}</span>
+          <small>/100</small>
+        </div>
+      </div>
+      <div class="result-title">
+        <span class="status-pill" [class.pass]="finalResult.passed" [class.fail]="!finalResult.passed">
+          {{ finalResult.passed ? 'Valide' : 'A renforcer' }}
+        </span>
+        <h2>Rapport Professionnel</h2>
+        <p>{{ finalResult.headline }}</p>
+        <p class="meta-line">
+          {{ finalResult.answeredCount }}/{{ finalResult.questionCount }} reponses renseignees •
+          {{ finalResult.totalDurationSeconds }}s sur l ensemble du parcours
+        </p>
+      </div>
+    </header>
+
+    <section class="kpi-grid">
+      <article class="kpi-card">
+        <span>Score QCM</span>
+        <strong>{{ finalResult.mcqScore }}</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Score Code</span>
+        <strong>{{ finalResult.codeScore }}</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Confiance</span>
+        <strong>{{ finalResult.confidenceAccuracy }}%</strong>
+      </article>
+      <article class="kpi-card">
+        <span>Vitesse</span>
+        <strong>{{ finalResult.speedScore }}</strong>
+      </article>
+    </section>
+
+    @if ((finalResult.skillScores | keyvalue).length > 0) {
+      <section class="skills-breakdown">
+        <h3>Performance par competence</h3>
+        <div class="skill-bars">
+          @for (entry of (finalResult.skillScores | keyvalue); track entry.key) {
+            <article class="skill-row">
+              <div class="skill-row-head">
+                <span>{{ entry.key }}</span>
+                <strong>{{ entry.value }}%</strong>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" [style.width.%]="entry.value"></div>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="summary-box gap-summary">
+      <h3>Analyse ecart: skills analysees vs test</h3>
+      <p>{{ finalResult.gapSummary }}</p>
+
+      @if (finalResult.skillGapAnalysis.length > 0) {
+        <div class="gap-table">
+          @for (gap of finalResult.skillGapAnalysis; track gap.skill) {
+            <article class="gap-row" [class.above]="gap.status === 'above'" [class.below]="gap.status === 'below'">
+              <div class="gap-head">
+                <strong>{{ gap.skill }}</strong>
+                <span>{{ gap.analyzedScore }}% → {{ gap.testScore }}% ({{ gap.delta >= 0 ? '+' : '' }}{{ gap.delta }})</span>
+              </div>
+              <p>{{ gap.recommendation }}</p>
+            </article>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="insights-grid">
+      <article class="insight-card">
+        <h3>Forces principales</h3>
+        <ul>
+          @for (s of finalResult.strongestSkills; track s) {
+            <li>{{ s }}</li>
+          }
+          @if (finalResult.strongestSkills.length === 0) {
+            <li>Aucune donnee exploitable</li>
+          }
+        </ul>
+      </article>
+
+      <article class="insight-card">
+        <h3>Axes d amelioration</h3>
+        <ul>
+          @for (s of finalResult.weakSkills; track s) {
+            <li>{{ s }}</li>
+          }
+          @if (finalResult.weakSkills.length === 0) {
+            <li>Profil globalement stable</li>
+          }
+        </ul>
+      </article>
+    </section>
+
+    @if (finalResult.mcqSummary) {
+      <section class="summary-box">
+        <h3>Synthese QCM</h3>
+        <p>{{ finalResult.mcqSummary }}</p>
+      </section>
+    }
+
+    @if (finalResult.codeFeedback) {
+      <section class="summary-box">
+        <h3>Feedback code</h3>
+        <p>{{ finalResult.codeFeedback }}</p>
+      </section>
+    }
+
+    <div class="result-actions">
+      <button type="button" class="btn primary" (click)="exportPdfReport()" [disabled]="exportingPdf">
+        {{ exportingPdf ? 'Export PDF...' : 'Exporter mon resultat en PDF' }}
+      </button>
+      <a routerLink="/dashboard" class="btn secondary">Voir le dashboard</a>
+      <a routerLink="/skill-test/progress" class="btn secondary">Historique des tests</a>
+      <a routerLink="/skill-test" class="btn secondary">Nouveau test</a>
+    </div>
+  </div>
+}

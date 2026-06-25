@@ -1,0 +1,343 @@
+<div class="af-container animate-fade-in">
+
+  <!-- ── Page Header ─────────────────────────────────────────────────────────── -->
+  <div class="af-header">
+    <div class="af-header-left">
+      <div class="af-header-icon">🎓</div>
+      <div>
+        <h2 class="af-title">Gestion des Formations</h2>
+        <p class="af-subtitle">Approuvez, suivez et gérez les formations des candidats en temps réel.</p>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-sm" (click)="loadFormations()" [disabled]="isLoading()">
+      <span [class.spinning]="isLoading()">↻</span>
+      Actualiser
+    </button>
+  </div>
+
+  <!-- ── Stats Cards ──────────────────────────────────────────────────────────── -->
+  <div class="af-stats">
+    <div class="af-stat-card">
+      <div class="af-stat-value">{{ stats().total }}</div>
+      <div class="af-stat-label">Total formations</div>
+      <div class="af-stat-bar" style="background: var(--primary-bg);">
+        <div class="af-stat-fill" [style.width.%]="100" style="background: var(--primary);"></div>
+      </div>
+    </div>
+    <div class="af-stat-card warning">
+      <div class="af-stat-value">{{ stats().pending }}</div>
+      <div class="af-stat-label">En attente</div>
+      <div class="af-stat-bar" style="background: var(--warning-bg);">
+        <div class="af-stat-fill" [style.width.%]="stats().total ? (stats().pending / stats().total) * 100 : 0" style="background: var(--warning);"></div>
+      </div>
+    </div>
+    <div class="af-stat-card info">
+      <div class="af-stat-value">{{ stats().inProgress }}</div>
+      <div class="af-stat-label">En cours</div>
+      <div class="af-stat-bar" style="background: var(--info-bg);">
+        <div class="af-stat-fill" [style.width.%]="stats().total ? (stats().inProgress / stats().total) * 100 : 0" style="background: var(--info);"></div>
+      </div>
+    </div>
+    <div class="af-stat-card success">
+      <div class="af-stat-value">{{ stats().completed }}</div>
+      <div class="af-stat-label">Terminées</div>
+      <div class="af-stat-bar" style="background: var(--success-bg);">
+        <div class="af-stat-fill" [style.width.%]="stats().total ? (stats().completed / stats().total) * 100 : 0" style="background: var(--success);"></div>
+      </div>
+    </div>
+    <div class="af-stat-card danger">
+      <div class="af-stat-value">{{ stats().rejected }}</div>
+      <div class="af-stat-label">Rejetées</div>
+      <div class="af-stat-bar" style="background: var(--danger-bg);">
+        <div class="af-stat-fill" [style.width.%]="stats().total ? (stats().rejected / stats().total) * 100 : 0" style="background: var(--danger);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Error ───────────────────────────────────────────────────────────────── -->
+  @if (errorMsg()) {
+    <div class="af-alert danger">⚠️ {{ errorMsg() }}</div>
+  }
+
+  <!-- ── Filters ─────────────────────────────────────────────────────────────── -->
+  <div class="af-toolbar">
+    <div class="af-search-wrap">
+      <span class="af-search-icon">🔍</span>
+      <input
+        id="af-search-input"
+        class="af-search-input"
+        type="text"
+        placeholder="Rechercher par candidat, titre ou fournisseur…"
+        [value]="searchQuery()"
+        (input)="setSearch($any($event.target).value)"
+      />
+      @if (searchQuery()) {
+        <button class="af-search-clear" (click)="setSearch('')">✕</button>
+      }
+    </div>
+    <select
+      id="af-type-filter"
+      class="af-select"
+      [value]="typeFilter()"
+      (change)="setTypeFilter($any($event.target).value)"
+    >
+      @for (opt of typeOptions; track opt.value) {
+        <option [value]="opt.value">{{ opt.label }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- ── Tabs ────────────────────────────────────────────────────────────────── -->
+  <div class="af-tabs">
+    @for (tab of tabs; track tab.key) {
+      <button
+        class="af-tab"
+        [class.active]="activeTab() === tab.key"
+        (click)="activeTab.set(tab.key)"
+        [id]="'tab-' + tab.key"
+      >
+        {{ tab.icon }} {{ tab.label }}
+        <span class="af-tab-count" [class.zero]="tabCount(tab.key) === 0">{{ tabCount(tab.key) }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- ── Loading Skeleton ────────────────────────────────────────────────────── -->
+  @if (isLoading()) {
+    <div class="af-skeleton-list">
+      @for (s of [1,2,3]; track s) {
+        <div class="af-skeleton-row">
+          <div class="af-skeleton short"></div>
+          <div class="af-skeleton medium"></div>
+          <div class="af-skeleton short"></div>
+          <div class="af-skeleton long"></div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Table ───────────────────────────────────────────────────────────────── -->
+  @if (!isLoading()) {
+    <div class="af-table-wrap">
+      <table class="af-table">
+        <thead>
+          <tr>
+            <th class="sortable" (click)="setSort('candidatName')">
+              Candidat <span class="sort-icon">{{ sortIcon('candidatName') }}</span>
+            </th>
+            <th class="sortable" (click)="setSort('titre')">
+              Formation <span class="sort-icon">{{ sortIcon('titre') }}</span>
+            </th>
+            <th>Type</th>
+            <th class="sortable" (click)="setSort('duree')">
+              Durée <span class="sort-icon">{{ sortIcon('duree') }}</span>
+            </th>
+            @if (activeTab() === 'in_progress') {
+              <th>Progression</th>
+            }
+            @if (activeTab() === 'history') {
+              <th>Score</th>
+              <th>Certificat</th>
+            }
+            <th>Statut</th>
+            <th class="sortable" (click)="setSort('requestedAt')">
+              Date <span class="sort-icon">{{ sortIcon('requestedAt') }}</span>
+            </th>
+            @if (activeTab() === 'pending') {
+              <th>Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (f of activeList(); track f.id) {
+            <tr class="af-row" [class.selected]="selectedFormationId() === f.id">
+              <td>
+                <div class="af-candidate">
+                  <div class="af-avatar">{{ (f.candidatName || '?')[0].toUpperCase() }}</div>
+                  <div>
+                    <strong>{{ f.candidatName || 'Inconnu' }}</strong>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="af-formation-cell">
+                  @if (f.url) {
+                    <a [href]="f.url" target="_blank" class="af-link">{{ f.titre }}</a>
+                  } @else {
+                    <span class="af-formation-title">{{ f.titre }}</span>
+                  }
+                  @if (f.fournisseur) {
+                    <small class="af-provider">{{ f.fournisseur }}</small>
+                  }
+                  @if (f.description) {
+                    <span class="af-desc-preview" [title]="f.description">{{ f.description | slice:0:60 }}{{ f.description.length > 60 ? '…' : '' }}</span>
+                  }
+                </div>
+              </td>
+              <td>
+                <span class="af-type-badge">{{ getTypeLabel(f.type) }}</span>
+              </td>
+              <td><span class="af-duration">{{ f.duree }}h</span></td>
+
+              <!-- Progression column (in_progress tab) -->
+              @if (activeTab() === 'in_progress') {
+                <td>
+                  <div class="af-progress-wrap">
+                    <div class="af-progress-bar">
+                      <div
+                        class="af-progress-fill"
+                        [style.width.%]="f.progression || 0"
+                        [style.background]="getProgressColor(f.progression || 0)"
+                      ></div>
+                    </div>
+                    <span class="af-progress-pct">{{ f.progression || 0 }}%</span>
+                  </div>
+                </td>
+              }
+
+              <!-- Score + Cert columns (history tab) -->
+              @if (activeTab() === 'history') {
+                <td>
+                  @if (f.miniTestScore !== null && f.miniTestScore !== undefined) {
+                    <div class="af-score" [class.passed]="f.miniTestPassed" [class.failed]="f.miniTestPassed === false">
+                      <span class="af-score-badge">{{ f.miniTestPassed ? '✓' : '✗' }} {{ f.miniTestScore }}/100</span>
+                    </div>
+                  } @else {
+                    <span class="af-no-data">—</span>
+                  }
+                </td>
+                <td>
+                  @if (f.certificateUrl) {
+                    <a [href]="f.certificateUrl" target="_blank" class="btn btn-sm btn-success af-cert-btn">
+                      ⬇ Certificat
+                    </a>
+                  } @else {
+                    <span class="af-no-data">—</span>
+                  }
+                </td>
+              }
+
+              <td>
+                <span class="badge" [ngClass]="getStatutClass(f.statut)">{{ getStatutLabel(f.statut) }}</span>
+              </td>
+              <td>
+                <span class="af-date">{{ getFormationDate(f) | date:'dd/MM/yy' }}</span>
+              </td>
+
+              <!-- Action button (pending tab only) -->
+              @if (activeTab() === 'pending') {
+                <td>
+                  <button
+                    class="btn btn-sm btn-primary"
+                    [id]="'btn-manage-' + f.id"
+                    (click)="togglePanel(f.id)"
+                  >
+                    {{ selectedFormationId() === f.id ? '✕ Fermer' : '⚙ Gérer' }}
+                  </button>
+                </td>
+              }
+            </tr>
+
+            <!-- Inline action panel (pending tab) -->
+            @if (activeTab() === 'pending' && selectedFormationId() === f.id) {
+              <tr class="af-panel-row">
+                <td [attr.colspan]="7">
+                  <div class="af-action-panel animate-scale-in">
+
+                    <!-- Formation details summary -->
+                    <div class="af-panel-info">
+                      <div class="af-info-item">
+                        <span class="af-info-label">Description</span>
+                        <span class="af-info-value">{{ f.description || 'Aucune description fournie.' }}</span>
+                      </div>
+                      <div class="af-info-row">
+                        @if (f.dateDebut) {
+                          <div class="af-info-item small">
+                            <span class="af-info-label">Début prévu</span>
+                            <span class="af-info-value">{{ f.dateDebut | date:'dd MMM yyyy' }}</span>
+                          </div>
+                        }
+                        @if (f.reviewNote) {
+                          <div class="af-info-item small">
+                            <span class="af-info-label">Note existante</span>
+                            <span class="af-info-value note">{{ f.reviewNote }}</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Input fields -->
+                    <div class="af-panel-inputs">
+                      <div class="af-field-group">
+                        <label class="af-label" [for]="'admin-note-' + f.id">📝 Note admin (approbation)</label>
+                        <input
+                          [id]="'admin-note-' + f.id"
+                          class="form-input"
+                          type="text"
+                          placeholder="Ex: Focus sur les chapitres 3–5"
+                          [value]="adminNote()"
+                          (input)="setAdminNote($any($event.target).value)"
+                        />
+                      </div>
+                      <div class="af-field-group">
+                        <label class="af-label" [for]="'reject-reason-' + f.id">🚫 Raison du rejet (optionnel)</label>
+                        <input
+                          [id]="'reject-reason-' + f.id"
+                          class="form-input"
+                          type="text"
+                          placeholder="Ex: Formation déjà suivie"
+                          [value]="rejectionReason()"
+                          (input)="setRejectionReason($any($event.target).value)"
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="af-panel-actions">
+                      <button class="btn btn-success" [id]="'btn-approve-' + f.id" (click)="approveFormation(f)" [disabled]="isLoading()">
+                        ✓ Approuver
+                      </button>
+                      <button class="btn btn-danger" [id]="'btn-reject-' + f.id" (click)="rejectFormation(f)" [disabled]="isLoading()">
+                        ✗ Rejeter
+                      </button>
+                      <button class="btn btn-ghost btn-sm" (click)="closePanel()">Annuler</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
+          } @empty {
+            <tr>
+              <td [attr.colspan]="activeTab() === 'pending' ? 8 : activeTab() === 'in_progress' ? 7 : 8" class="af-empty">
+                <div class="af-empty-state">
+                  <span class="af-empty-icon">
+                    @if (activeTab() === 'pending') { ⏳ }
+                    @else if (activeTab() === 'in_progress') { 🔄 }
+                    @else { 📋 }
+                  </span>
+                  <p>
+                    @if (searchQuery() || typeFilter() !== 'ALL') {
+                      Aucun résultat pour vos filtres actuels.
+                    } @else if (activeTab() === 'pending') {
+                      Aucune demande en attente.
+                    } @else if (activeTab() === 'in_progress') {
+                      Aucune formation en cours.
+                    } @else {
+                      Aucune formation dans l'historique.
+                    }
+                  </p>
+                  @if (searchQuery() || typeFilter() !== 'ALL') {
+                    <button class="btn btn-ghost btn-sm" (click)="setSearch(''); setTypeFilter('ALL')">
+                      Réinitialiser les filtres
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>

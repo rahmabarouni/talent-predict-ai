@@ -1,0 +1,112 @@
+<div class="pcm-test-container">
+  <!-- Immersive Background Elements -->
+  <div class="floating-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- Top Navigation & Progress -->
+  <header class="test-header">
+    <div class="nav-top">
+      <a routerLink="/evaluation/intro" class="btn-back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div class="test-identity">
+        <span class="tag-ai">AI-POWERED</span>
+        <span class="test-name">PCM Assessment</span>
+      </div>
+      <div class="step-badge">
+        QUESTION {{ currentStep + 1 }} <span>/ {{ totalSteps }}</span>
+      </div>
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="progress"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Focused Question Area -->
+  <main class="focused-content">
+    <div class="question-perspective">
+      @for (question of currentQuestions; track question.id) {
+        <div class="question-card-wrapper" [class.enter-anim]="true">
+          <app-question-card
+            [question]="question.question"
+            [questionNumber]="currentStep + 1"
+            [category]="question.category"
+            [currentAnswer]="responses[question.id]"
+            (answer)="onAnswerChange(question.id, $event)"
+          />
+        </div>
+      }
+    </div>
+  </main>
+
+  <!-- Control Bar -->
+  <footer class="controls-bar">
+    <div class="controls-content">
+      <button 
+        class="ctrl-btn prev" 
+        (click)="previousStep()"
+        [disabled]="currentStep === 0"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        <span>Précédent</span>
+      </button>
+
+      <div class="dots-indicator">
+        @for (s of steps; track s) {
+          <div class="dot" 
+               [class.active]="s === currentStep" 
+               [class.completed]="s < currentStep"
+               (click)="goToStep(s)">
+          </div>
+        }
+      </div>
+
+      @if (currentStep < totalSteps - 1) {
+        <button 
+          class="ctrl-btn next" 
+          (click)="nextStep()"
+          [disabled]="!canProceed"
+        >
+          <span>Continuer</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </button>
+      } @else {
+        <button 
+          class="ctrl-btn finish" 
+          (click)="submitTest()"
+          [disabled]="!canProceed || loading"
+          [class.loading]="loading"
+        >
+          @if (loading) {
+            <span class="loader"></span>
+            <span>Génération du Profil...</span>
+          } @else {
+            <span>Voir mes résultats</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          }
+        </button>
+      }
+    </div>
+    
+    <div class="secure-footer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      Confidentialité garantie par TalentPredict AI
+    </div>
+  </footer>
+</div>

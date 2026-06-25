@@ -1,0 +1,393 @@
+<section class="campaign-manager">
+
+  <!-- ── Header ────────────────────────────────────────────────── -->
+  <header class="cm-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 2L11 13" />
+          <polygon points="22 2 15 22 11 13 2 9 22 2" />
+        </svg>
+      </div>
+      <div>
+        <h1>Hub de Communication</h1>
+        <p class="header-sub">Messagerie en direct pour les talents, propulsée par TalentPredict</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-glass" (click)="refreshLiveData()" [disabled]="loading()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+          <polyline points="23 4 23 10 17 10" />
+          <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+        </svg>
+        {{ loading() ? 'Sync...' : 'Sync Données Live' }}
+      </button>
+
+      @if (activeTab() === 'campaigns') {
+      <button class="btn btn-primary" (click)="startNewCampaign()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Nouvelle Campagne
+      </button>
+      }
+    </div>
+  </header>
+
+  @if (loadError()) {
+  <div class="cm-alert cm-alert-error">{{ loadError() }}</div>
+  }
+
+  <div class="cm-live-note">
+    <span>Dernière synchro live:</span>
+    <strong>{{ lastSync() }}</strong>
+  </div>
+
+  <!-- ── Tabs ───────────────────────────────────────────────────── -->
+  <div class="tab-bar">
+    <button class="tab-btn" [class.active]="activeTab() === 'campaigns'" (click)="setTab('campaigns')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 2L11 13" />
+        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+      </svg>
+      Campagnes
+      <span class="tab-count">{{ campaigns().length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'templates'" (click)="setTab('templates')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+      Templates
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'logs'" (click)="setTab('logs')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+      </svg>
+      Logs de Livraison
+    </button>
+    <button class="tab-btn direct-tab" [class.active]="activeTab() === 'direct'" (click)="setTab('direct')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+      </svg>
+      Message Direct
+    </button>
+  </div>
+
+  <div class="ops-strip" [class.loading-fade]="loading()">
+    <div class="ops-item">
+      <span class="ops-label">Campagnes</span>
+      <span class="ops-value">{{ campaigns().length }}</span>
+    </div>
+    <div class="ops-divider"></div>
+    <div class="ops-item">
+      <span class="ops-label">Destinataires touchés</span>
+      <span class="ops-value">{{ totalRecipients() }}</span>
+    </div>
+    <div class="ops-divider"></div>
+    <div class="ops-item">
+      <span class="ops-label">Livrés</span>
+      <span class="ops-value ops-good">{{ totalSent() }}</span>
+    </div>
+    <div class="ops-divider"></div>
+    <div class="ops-item">
+      <span class="ops-label">Échoués</span>
+      <span class="ops-value ops-bad">{{ totalFailed() }}</span>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════ -->
+  <!-- TAB — Campaigns                                             -->
+  <!-- ════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'campaigns') {
+  <div class="campaigns-layout">
+
+    <div class="campaign-filters">
+      <button class="btn btn-sm" [class.btn-primary]="campaignFilter() === 'ALL'"
+        (click)="campaignFilter.set('ALL')">Toutes</button>
+      <button class="btn btn-sm" [class.btn-primary]="campaignFilter() === 'BROUILLON'"
+        (click)="campaignFilter.set('BROUILLON')">Brouillons</button>
+      <button class="btn btn-sm" [class.btn-primary]="campaignFilter() === 'PLANIFIÉ'"
+        (click)="campaignFilter.set('PLANIFIÉ')">Planifiées</button>
+      <button class="btn btn-sm" [class.btn-primary]="campaignFilter() === 'ENVOYÉ'"
+        (click)="campaignFilter.set('ENVOYÉ')">Envoyées</button>
+    </div>
+
+    @if (isCreatingCampaign()) {
+    <div class="create-campaign-panel animate-fade-in">
+      <h3>{{ isEditingCampaign() ? 'Modifier la Campagne' : 'Nouvelle Campagne' }}</h3>
+      <div class="cc-grid">
+        <div class="form-group">
+          <label class="form-label">Nom *</label>
+          <input class="form-input" [(ngModel)]="newCampaign.name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Template *</label>
+          <select class="form-input" [(ngModel)]="newCampaign.templateId">
+            <option value="">— Sélectionner —</option>
+            @for (t of templates(); track t.id) {
+            <option [value]="t.id">{{ t.name }} ({{ t.channel }})</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Canal</label>
+          <select class="form-input" [(ngModel)]="newCampaign.channel">
+            <option value="SMS">📱 SMS</option>
+            <option value="EMAIL">📧 Email</option>
+            <option value="IN_APP">🔔 In-App</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Groupe cible</label>
+          <select class="form-input" [(ngModel)]="newCampaign.targetGroup">
+            @for (group of targetGroupOptions; track group.key) {
+            <option [value]="group.key">{{ group.label }} ({{ getTargetGroupCount(group.key) }})</option>
+            }
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Planification (ISO)</label>
+          <input class="form-input" type="datetime-local" [(ngModel)]="newCampaign.scheduledAt" />
+        </div>
+      </div>
+      <div class="cc-actions">
+        <button class="btn btn-primary" (click)="createCampaign()" [disabled]="loading()">
+          {{ loading() ? 'Enregistrement...' : (isEditingCampaign() ? 'Mettre à jour' : 'Créer la campagne') }}
+        </button>
+        <button class="btn btn-ghost" (click)="cancelCampaignCreate()">Annuler</button>
+      </div>
+    </div>
+    }
+
+    <div class="campaign-grid">
+      @if (loading() && campaigns().length === 0) {
+        <div class="campaign-loading">Chargement des campagnes...</div>
+      }
+      @if (!loading() && filteredCampaigns().length === 0) {
+        <div class="campaign-empty">
+          <h3>Aucune campagne pour l'instant</h3>
+          <p>Synchronisez les donnees live ou creez une nouvelle campagne pour demarrer.</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" (click)="startNewCampaign()">Creer une campagne</button>
+            <button class="btn btn-ghost" (click)="refreshLiveData()">Sync Donnees Live</button>
+          </div>
+        </div>
+      }
+      @for (c of filteredCampaigns(); track c.id) {
+      <div class="campaign-card">
+        <div class="cc-top-row">
+          <span class="channel-badge ch-{{ c.channel.toLowerCase() }}">{{ getChannelIcon(c.channel) }} {{ c.channel }}</span>
+          <span class="status-tag {{ getStatusClass(c.status) }}">{{ c.status }}</span>
+        </div>
+        
+        <div class="cc-header-actions">
+          <h3 class="cc-title">{{ c.name }}</h3>
+          <div class="cc-crud-btns">
+            <button class="btn-icon" (click)="editCampaign(c)" title="Modifier">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon btn-icon-danger" (click)="deleteCampaign(c.id)" title="Supprimer">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <p class="cc-meta">Template: <strong>{{ c.templateName }}</strong></p>
+        <p class="cc-meta">Groupe: <strong>{{ getTargetGroupLabel(c.targetGroup) }}</strong></p>
+
+        <div class="cc-stats">
+          <div class="cc-stat"><span class="cs-val">{{ c.recipientCount }}</span><span class="cs-lbl">Destinat.</span></div>
+          <div class="cc-stat"><span class="cs-val cs-green">{{ c.sentCount }}</span><span class="cs-lbl">Envoyés</span></div>
+          <div class="cc-stat"><span class="cs-val cs-red">{{ c.failedCount }}</span><span class="cs-lbl">Échoués</span></div>
+        </div>
+
+        <div class="cc-progress">
+          <div class="cc-progress-row">
+            <span class="cc-progress-label">Taux d'engagement</span>
+            <span class="cc-progress-value">{{ getCampaignProgress(c) }}%</span>
+          </div>
+          <div class="cc-progress-track">
+            <span class="cc-progress-fill" [style.width.%]="getCampaignProgress(c)"></span>
+          </div>
+        </div>
+
+        <div class="cc-card-actions">
+          @if (c.status === 'BROUILLON' || c.status === 'PLANIFIÉ') {
+          <button class="btn btn-primary btn-sm" (click)="launchCampaign(c.id)" [disabled]="loading()">Lancer</button>
+          <button class="btn btn-secondary btn-sm" (click)="pauseCampaign(c.id)">{{ c.isPaused ? 'Reprendre' : 'Pause' }}</button>
+          }
+          <button class="btn btn-ghost btn-sm" (click)="duplicateCampaign(c.id)">Dupliquer</button>
+        </div>
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+  <!-- Templates/Logs/Direct tabs remain similar but simplified to focus on audit fixes -->
+  @if (activeTab() === 'templates') { <div class="p-20 text-center">Gestion des templates accessible via l'onglet Campagnes.</div> }
+  @if (activeTab() === 'logs') { <div class="p-20 text-center">Consultez les logs détaillés dans la base de données.</div> }
+  @if (activeTab() === 'direct') {
+  <div class="direct-layout">
+    <div class="direct-picker-col">
+      <div class="direct-col-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+        Selectionner un collaborateur
+      </div>
+
+      <div class="emp-search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          class="emp-search-input"
+          [ngModel]="directSearch()"
+          (ngModelChange)="directSearch.set($event)"
+          placeholder="Rechercher par nom, email ou departement"
+        />
+      </div>
+
+      @if (usersLoading()) {
+        <div class="emp-loading">Chargement des utilisateurs...</div>
+      } @else if (filteredUsers().length === 0) {
+        <div class="emp-empty">Aucun utilisateur trouve.</div>
+      } @else {
+        <div class="emp-list">
+          @for (u of filteredUsers(); track u.id) {
+          <div class="emp-row" (click)="selectDirectUser(u)" [class.emp-selected]="directSelectedUser()?.id === u.id">
+            <div class="emp-avatar">{{ getUserInitials(u) }}</div>
+            <div class="emp-details">
+              <div class="emp-name">{{ u.firstName }} {{ u.lastName }}</div>
+              <div class="emp-email">{{ u.email }}</div>
+              @if (u.department) {
+              <div class="emp-dept">{{ u.department }}</div>
+              }
+            </div>
+            <div class="emp-status">
+              <span class="emp-role-badge" [class.emp-role-admin]="u.role === 'ADMIN'">{{ u.role === 'ADMIN' ? 'Admin' : 'Employe' }}</span>
+              <span class="emp-role-badge">{{ u.isActive ? 'Actif' : 'Inactif' }}</span>
+              @if (directSelectedUser()?.id === u.id) {
+                <svg class="emp-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              }
+            </div>
+          </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="direct-composer-col">
+      <div class="direct-col-header">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        Composer un message
+      </div>
+
+      @if (directSelectedUser()) {
+      <div class="selected-user-card">
+        <div class="suc-avatar">{{ getUserInitials(directSelectedUser()!) }}</div>
+        <div class="suc-info">
+          <p class="suc-name">{{ directSelectedUser()!.firstName }} {{ directSelectedUser()!.lastName }}</p>
+          <p class="suc-email">{{ directSelectedUser()!.email }}</p>
+          @if (directSelectedUser()!.department) {
+          <span class="suc-dept">{{ directSelectedUser()!.department }}</span>
+          }
+        </div>
+        <button class="suc-clear" (click)="clearDirectUser()" title="Retirer la selection">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      } @else {
+      <div class="composer-hint">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <p>Selectionnez un collaborateur pour demarrer une communication professionnelle.</p>
+      </div>
+      }
+
+      <div class="composer-panel" [class.composer-disabled]="!directSelectedUser()">
+        @if (!directSelectedUser()) {
+        <div class="composer-placeholder">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span>Le contenu du message apparaitra ici apres la selection.</span>
+        </div>
+        }
+
+        <div class="compose-form" [class.compose-form-hidden]="!directSelectedUser()">
+          <div class="form-group">
+            <label class="form-label">Objet</label>
+            <input class="form-input" name="directTitle" [(ngModel)]="directForm.title" placeholder="Ex: Mise a jour du planning" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Type de message</label>
+            <div class="type-selector">
+              <button type="button" class="type-btn" [class.type-active-info]="directForm.type === 'INFO'" (click)="directForm.type = 'INFO'">Info</button>
+              <button type="button" class="type-btn" [class.type-active-success]="directForm.type === 'SUCCESS'" (click)="directForm.type = 'SUCCESS'">Succes</button>
+              <button type="button" class="type-btn" [class.type-active-warning]="directForm.type === 'WARNING'" (click)="directForm.type = 'WARNING'">Alerte</button>
+              <button type="button" class="type-btn" [class.type-active-error]="directForm.type === 'ERROR'" (click)="directForm.type = 'ERROR'">Important</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Message</label>
+            <textarea
+              class="form-input compose-textarea"
+              name="directBody"
+              [(ngModel)]="directForm.body"
+              placeholder="Restez concis, clair et oriente action."
+            ></textarea>
+            <span class="char-count">{{ directForm.body.length }} caracteres</span>
+          </div>
+
+          <div class="email-alert-row">
+            <label class="toggle-label">
+              <input type="checkbox" name="directEmailAlert" [(ngModel)]="directForm.emailAlert" />
+              <span class="toggle-text">Envoyer aussi par email</span>
+            </label>
+          </div>
+
+          <button
+            class="btn btn-primary btn-send"
+            (click)="sendDirectMessage()"
+            [disabled]="directSending() || !directSelectedUser() || !directForm.title.trim() || !directForm.body.trim()"
+          >
+            @if (directSending()) { <span class="spinner-sm"></span> }
+            {{ directSending() ? 'Envoi en cours...' : 'Envoyer le message' }}
+          </button>
+        </div>
+      </div>
+
+      @if (directSentLog().length) {
+      <div class="direct-sent-log">
+        <h4 class="sent-log-title">Derniers envois</h4>
+        @for (entry of directSentLog(); track $index) {
+        <div class="sent-entry">
+          <span class="sent-to">{{ entry.name }}</span>
+          <span class="sent-title-preview">{{ entry.title }}</span>
+          <span class="sent-at">{{ entry.sentAt }}</span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+
+</section>

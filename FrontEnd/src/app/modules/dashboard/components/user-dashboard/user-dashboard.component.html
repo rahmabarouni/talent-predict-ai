@@ -1,0 +1,215 @@
+<div class="bento-dashboard light-theme">
+  @if (loading) {
+  <div class="bento-loading">
+    <div class="bento-spinner"></div>
+    <p>Initializing AI Command Center...</p>
+  </div>
+  }
+
+  @if (error) {
+  <div class="bento-error">
+    <div class="error-icon">⚠️</div>
+    <p>{{ error }}</p>
+  </div>
+  }
+
+  @if (!loading && dashboardData) {
+  <header class="bento-header">
+    <div class="header-left">
+      <h1>Welcome back, <span>{{ displayName }}</span></h1>
+      <p>{{ currentDate | date:'EEEE, MMMM d, yyyy' }}</p>
+    </div>
+    <div class="header-right action-group">
+      <button class="btn-glow" routerLink="/evaluation/intro">
+        <span class="icon">🧠</span> Soft Skills Test
+      </button>
+      <button class="btn-glow btn-tech" routerLink="/competences" title="Take a technical assessment or code challenge">
+        <span class="icon">💻</span> Tech Skills Test
+      </button>
+      <button class="btn-glow btn-pdf" (click)="downloadPassport()" title="Export your Talent Passport as PDF">
+        <span class="icon">📄</span> Export Passport
+      </button>
+    </div>
+  </header>
+
+  <div class="bento-grid">
+
+    <!-- 1. AI Persona (Hero) -->
+    <div class="bento-card tile-hero">
+      <div class="bento-card-glow"></div>
+      <div class="hero-content">
+        <div class="pcm-badge-container">
+          <div class="pcm-icon">🧠</div>
+          <div class="pcm-info">
+            <span class="pcm-label">AI Persona</span>
+            <h2>{{ pcmType }}</h2>
+            <p>{{ pcmDescription }}</p>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="mini-stat">
+            <span class="val">{{ scoreMoyen }}<small>%</small></span>
+            <span class="lbl">Avg Score</span>
+          </div>
+          <div class="mini-stat">
+            <span class="val">🔥{{ streakHebdo }}</span>
+            <span class="lbl">Week Streak</span>
+          </div>
+          <div class="mini-stat">
+            <span class="val">{{ testsCompletes }}</span>
+            <span class="lbl">Tests</span>
+          </div>
+          <div class="mini-stat">
+            <span class="val">{{ softSkillsCount }}</span>
+            <span class="lbl">Soft Skills</span>
+          </div>
+          <div class="mini-stat">
+            <span class="val">{{ techSkillsCount }}</span>
+            <span class="lbl">Tech Skills</span>
+          </div>
+          <div class="mini-stat">
+            <span class="val">{{ dashboardData.nombreFormationsTotal || 0 }}</span>
+            <span class="lbl">Formations</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. AI Prediction -->
+    <div class="bento-card tile-ai">
+      <div class="card-header flex-between">
+        <div class="flex-center gap-2">
+          <span class="ai-pulse"></span>
+          <h3>AI Prediction</h3>
+        </div>
+        <button class="btn-icon" (click)="generatePrediction()" [disabled]="generatingPrediction"
+          title="Generate New AI Prediction">
+          {{ generatingPrediction ? '↻' : '⚡' }}
+        </button>
+      </div>
+
+      @if (latestPrediction) {
+      <div class="ai-content">
+        <div class="ai-score-ring">
+          <div class="ring-circle">
+            <span class="ring-val">{{ formatPercent(latestPrediction.scoreFinal ?? latestPrediction.scoreConfiance) }}%</span>
+            <span class="ring-lbl">Global</span>
+          </div>
+        </div>
+        <div class="ai-reco">
+          @if (latestPrediction.recommandationSoft) {
+          <p><span>Soft:</span> {{ formatRecommendation(latestPrediction.recommandationSoft) }}</p>
+          }
+          @if (latestPrediction.recommandationTech) {
+          <p><span>Tech:</span> {{ formatRecommendation(latestPrediction.recommandationTech) }}</p>
+          }
+        </div>
+      </div>
+      } @else {
+      <div class="empty-state ai-empty">
+        <p>Generate your first AI readiness prediction.</p>
+      </div>
+      }
+    </div>
+
+    <!-- 3. Skill Strength Matrix (Expanded) -->
+    <div class="bento-card tile-radar">
+      <div class="card-header flex-between">
+        <h3>Skill Distribution Matrix</h3>
+        <div class="bento-tabs">
+          <button [class.active]="radarToggle === 'tous'" (click)="radarToggle = 'tous'">All</button>
+          <button [class.active]="radarToggle === 'tech'" (click)="radarToggle = 'tech'">Tech</button>
+          <button [class.active]="radarToggle === 'soft'" (click)="radarToggle = 'soft'">Soft</button>
+        </div>
+      </div>
+
+      <div class="radar-container">
+        @if (radarEntries.length > 0) {
+        <div class="skill-matrix-grid">
+          @for (entry of radarEntries; track entry.name) {
+          <div class="matrix-item">
+            <div class="matrix-info">
+              <span class="matrix-name">{{ entry.name }}</span>
+              <span class="matrix-score">{{ entry.score }}%</span>
+            </div>
+            <div class="matrix-bar-bg">
+              <div class="matrix-bar-fill" [style.width.%]="entry.score" [class.tech]="entry.type==='tech'"></div>
+            </div>
+          </div>
+          }
+        </div>
+        } @else {
+        <div class="empty-state">No skills data available to build matrix.</div>
+        }
+      </div>
+    </div>
+
+    <!-- 4. Skill Momentum -->
+    <div class="bento-card tile-momentum">
+      <div class="card-header">
+        <h3>Momentum</h3>
+      </div>
+      <div class="momentum-list">
+        @for(m of skillMomentum; track m.name) {
+        <div class="m-item">
+          <span class="m-name">{{ m.name }}</span>
+          <div class="m-right">
+            <span class="m-score">{{ m.current }}</span>
+            <span class="m-badge" [class.up]="m.dir==='up'" [class.down]="m.dir==='down'">
+              {{ m.dir === 'up' ? '↗' : (m.dir === 'down' ? '↘' : '→') }} {{ Math.abs(m.delta) }}
+            </span>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- 5. Career Pathways -->
+    <div class="bento-card tile-career">
+      <div class="card-header flex-between">
+        <h3>Career Pathways</h3>
+        <button class="btn-glow" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;"
+          routerLink="/mes-resultats/progress" title="Manage your skills and training progress">
+          Track Progress →
+        </button>
+      </div>
+      <div class="career-list">
+        @for (match of careerMatches; track match.role) {
+        <div class="career-item">
+          <div class="c-top">
+            <h4>{{ match.role }}</h4>
+            <div class="c-score-badge" [class.high]="match.match >= 80">{{ match.match }}% Match</div>
+          </div>
+          <div class="c-progress-bg">
+            <div class="c-progress-fill" [style.width.%]="match.match"></div>
+          </div>
+          <div class="c-gaps">
+            <span class="gap-lbl">Missing:</span>
+            @for (gap of match.gaps; track gap) { <span class="gap-tag">{{ gap }}</span> }
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- 6. Recent Activity -->
+    <div class="bento-card tile-feed">
+      <div class="card-header">
+        <h3>Recent Activity</h3>
+      </div>
+      <div class="feed-timeline">
+        @for(item of feed; track item.text) {
+        <div class="feed-item" [class.glow]="item.highlight">
+          <div class="feed-icon">{{ item.icon }}</div>
+          <div class="feed-txt">
+            <p>{{ item.text }}</p>
+            <small>{{ item.date }}</small>
+          </div>
+        </div>
+        }
+      </div>
+    </div>
+
+  </div>
+  }
+</div>

@@ -1,0 +1,300 @@
+<div class="results-container" id="report-content">
+
+  <!-- Top Banner / Confidentiality -->
+  <div class="top-confidential">
+    <span>CONFIDENTIEL • RAPPORT D'ÉVALUATION RH</span>
+    <span>ID: TP-{{ result?.userId?.toString().slice(-6) }}</span>
+  </div>
+
+  <!-- Header / Hero Section -->
+  <section class="hero-card">
+    <div class="hero-body">
+      <div class="candidate-info">
+        <div class="header-meta">
+          <span class="badge-premium">TALENT PREDICT ENGINE </span>
+          <span class="date">{{ today | date:'MMMM yyyy' }}</span>
+        </div>
+        <h1>Analyse Cognitive <br><span class="gradient-text">Soft Skills</span></h1>
+        <div class="candidate-details">
+          <div class="detail-item">
+            <span class="label">CANDIDAT</span>
+            <span class="val">{{ result?.userName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">STATUT</span>
+            <span class="val">Évaluation Complétée</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="overall-score-box">
+        <div class="score-circle">
+          <svg viewBox="0 0 100 100">
+            <circle class="track" cx="50" cy="50" r="45" />
+            <circle class="fill" cx="50" cy="50" r="45"
+              [style.stroke-dashoffset]="283 - (result?.overallScore / 10 * 283)"
+              [style.stroke]="getScoreColor(result?.overallScore || 0)" />
+          </svg>
+          <div class="score-value">
+            <span class="val">{{ result?.overallScore }}</span>
+            <span class="max">Score Global</span>
+          </div>
+        </div>
+        <div class="integrity-badge" [title]="'Score basé sur la diversité des sources de données'">
+          <span class="dot"></span> IA Confidence: {{ getDataIntegrity() }}%
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-actions" id="ignore-pdf-actions">
+      <button class="btn-export" (click)="exportResultPdf()" [disabled]="exportingPdf">
+        @if (!exportingPdf) {
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        }
+        @if (exportingPdf) {
+          <span class="loader"></span>
+        }
+        {{ exportingPdf ? 'Finalisation...' : 'Exporter le Rapport Officiel' }}
+      </button>
+      <button class="btn-dashboard" routerLink="/dashboard">Quitter</button>
+    </div>
+  </section>
+
+  <div class="results-grid">
+
+    <!-- Expert Verdict (The "Agent" part) -->
+    <section class="card verdict-card full-width">
+      <div class="card-header">
+        <div class="agent-avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
+            <path
+              d="M12 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm0 10a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-4-4a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm8 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
+          </svg>
+        </div>
+        <div class="header-txt">
+          <h2>Verdict de l'Agent d'Analyse</h2>
+          <span class="agent-id">Agent #8042 (Neural Core)</span>
+        </div>
+      </div>
+      <div class="verdict-content">
+        <div class="verdict-text">
+          <p>{{ result?.summary }}</p>
+          <div class="agent-signature">
+            <div class="sig-line"></div>
+
+          </div>
+        </div>
+        <div class="personality-mini-card">
+          <span class="mini-label">Structure PCM Dominante</span>
+          <span class="mini-val">{{ result?.personalityType }}</span>
+          <div class="type-icon-box">{{ getPersonalityEmoji(result?.personalityType) }}</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Radar Chart (Pro Skill Distribution) -->
+    <section class="card radar-card">
+      <div class="card-header">
+        <span class="icon">🕸️</span>
+        <h2>Matrice des Soft Skills</h2>
+      </div>
+      <div class="chart-wrapper">
+        <app-radar-chart [axes]="getRadarAxes()" [size]="280">
+        </app-radar-chart>
+      </div>
+    </section>
+
+    <!-- Source Insights (Detailed - SHOW FROM WHERE CAME FROM) -->
+    <section class="card sources-pro-card full-width">
+      <div class="card-header">
+        <span class="icon">🔗</span>
+        <h2>Analyse Transversale par Source</h2>
+      </div>
+      <div class="source-grid">
+        @for (s of getActiveSources(); track s) {
+          <div class="source-detail-item">
+            <div class="source-top">
+              <div class="source-identity">
+                <span class="source-icon">{{ getSourceIcon(s) }}</span>
+                <span class="source-label">{{ getSourceLabel(s) }}</span>
+              </div>
+              <span class="source-score" [style.color]="getScoreColor(getSourceScore(s))">{{ getSourceScore(s)
+              }}/10</span>
+            </div>
+            <div class="source-text">{{ getSourceDetails(s) }}</div>
+            <div class="source-footer">
+              <span class="badge-verified">Verified By AI Engine</span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Personality Detailed Breakdown (PCM) -->
+    <section class="card pcm-detailed-card full-width">
+      <div class="card-header">
+        <span class="icon">🧩</span>
+        <h2>Profil de Personnalité Détaillé (PCM)</h2>
+      </div>
+      <div class="pcm-grid">
+        <div class="pcm-main-info">
+          <div class="pcm-type-banner">
+            <span class="pcm-emoji">{{ getPersonalityEmoji(result?.personalityType) }}</span>
+            <div class="pcm-type-txt">
+              <h3>Type Dominant : {{ result?.personalityType }}</h3>
+              <p>Ce profil définit votre mode de communication privilégié et vos sources de motivation principales.</p>
+            </div>
+          </div>
+          <div class="pcm-cards-grid">
+            @for (card of personalityCards; track card.key) {
+              <div class="pcm-mini-card"
+                [class.active]="getActivePersonalityKey() === card.key">
+                <span class="p-icon">{{ card.icon }}</span>
+                <span class="p-label">{{ card.label }}</span>
+                <p class="p-desc">{{ card.desc }}</p>
+              </div>
+            }
+          </div>
+        </div>
+        @if (result?.personalityType) {
+          <div class="pcm-characteristics">
+            <div class="char-box">
+              <h4>Points Forts Naturels</h4>
+              <ul>
+                @for (s of result?.top3Strengths; track s) {
+                  <li>{{ getSkillLabel(s) }}</li>
+                }
+              </ul>
+            </div>
+            <div class="char-box">
+              <h4>Environnement Favorisé</h4>
+              <p>{{ result?.careerAdvice }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- IA Scenario Result (New) -->
+
+    <!-- Traits Card -->
+    <section class="card traits-card">
+      <div class="card-header">
+        <span class="icon">⭐</span>
+        <h2>Forces Distinctionnelles</h2>
+      </div>
+      <div class="trait-items">
+        @for (s of result?.top3Strengths; track s) {
+          <div class="trait-item">
+            <span class="trait-icon">{{ getSkillIcon(s) }}</span>
+            <div class="trait-meta">
+              <span class="trait-name">{{ getSkillLabel(s) }}</span>
+              <span class="trait-desc">Compétence majeure confirmée par l'analyse transversale.</span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="card traits-card">
+      <div class="card-header">
+        <span class="icon">🚀</span>
+        <h2>Potentiel de Croissance</h2>
+      </div>
+      <div class="trait-items">
+        @for (w of result?.top3Weaknesses; track w) {
+          <div class="trait-item">
+            <span class="trait-icon orange">{{ getSkillIcon(w) }}</span>
+            <div class="trait-meta">
+              <span class="trait-name">{{ getSkillLabel(w) }}</span>
+              <span class="trait-desc">Axe de développement identifié pour l'évolution.</span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Full Skills Inventory -->
+    <section class="card full-skills-card full-width">
+      <div class="card-header">
+        <span class="icon">📊</span>
+        <h2>Inventaire Complet des Soft Skills</h2>
+      </div>
+      <div class="skills-detailed-grid">
+        @for (entry of getSkillEntries(); track entry[0]) {
+          <div class="skill-detail-row">
+            <div class="sd-meta">
+              <span class="sd-icon">{{ getSkillIcon(entry[0]) }}</span>
+              <span class="sd-label">{{ getSkillLabel(entry[0]) }}</span>
+            </div>
+            <div class="sd-progress">
+              <div class="sd-bar-bg">
+                <div class="sd-bar-fill" [style.width.%]="entry[1] * 10" [style.background]="getScoreColor(entry[1])">
+                </div>
+              </div>
+              <span class="sd-val">{{ entry[1] }}/10</span>
+            </div>
+            <span class="sd-status" [style.color]="getScoreColor(entry[1])">{{ getScoreLabel(entry[1]) }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Roadmap Card -->
+    <section class="card roadmap-card full-width">
+      <div class="card-header">
+        <span class="icon">🛤️</span>
+        <h2>Plan de Développement Personnalisé</h2>
+      </div>
+      <div class="roadmap-grid">
+        <div class="roadmap-col">
+          <h3>Conseils Stratégiques IA</h3>
+          <p>{{ result?.careerAdvice }}</p>
+          <div class="expert-note">
+            <strong>Note de l'Expert:</strong> L'analyse montre une forte corrélation entre votre type {{
+            result?.personalityType }} et vos scores en {{ result?.top3Strengths?.[0] }}.
+          </div>
+        </div>
+        <div class="roadmap-col">
+          <h3>Actions de Formation Recommandées</h3>
+          <div class="reco-list">
+            @for (r of getRecommendationEntries(); track r[0]) {
+              <div class="reco-mini">
+                <div class="reco-header">
+                  <span class="reco-skill">{{ getSkillLabel(r[0]) }}</span>
+                  <span class="reco-tag">Priorité Haute</span>
+                </div>
+                <p class="reco-desc">{{ r[1] }}</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="pro-footer">
+    <div class="footer-left">
+      <span>Généré par TALENT PREDICT ENGINE Neural Core</span>
+    </div>
+    <div class="footer-right">
+      <span>Ce rapport est une analyse prédictive et doit être utilisé comme aide à la décision.</span>
+    </div>
+  </footer>
+</div>
+
+@if (loading) {
+  <div class="loading-overlay">
+    <div class="loader-box">
+      <div class="ring"></div>
+      <h3>Synchronisation Neuronale...</h3>
+      <p>L'Agent AI compile vos traces LinkedIn, GitHub et PCM.</p>
+    </div>
+  </div>
+}

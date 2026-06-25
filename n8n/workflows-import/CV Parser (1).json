@@ -1,0 +1,168 @@
+{
+  "name": "CV Parser",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "=llama3.2:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        48,
+        224
+      ],
+      "id": "89a22cd0-acc5-4811-ade6-446e7e00332b",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "zcrzpoNAhBR7F9af",
+          "name": "Ollama account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "soft-skills-extract",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -480,
+        0
+      ],
+      "id": "e444655a-28ba-4180-a0f1-619a2548b4cb",
+      "name": "Receive CV Data",
+      "webhookId": "5f60ecdb-b90e-4b3a-9a8a-327a7c162206"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\n    const cvText = body.extracted_cv_text ?? '';\n    const fullName = body.full_name ?? '';\n    const email = body.email ?? '';\n\n    if (!cvText || cvText.trim() === '') {\n      throw new Error('extracted_cv_text is empty or missing');\n    }\n\n    return [{ json: { cv_text: cvText, full_name: fullName, email: email } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        0
+      ],
+      "id": "1d554451-b597-46f2-80bc-0d06ba27f2f6",
+      "name": "Extract CV Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a CV analyst specialized in soft skills detection.\nExtract ONLY soft skills signals from the following CV text.\nReturn ONLY a valid JSON object with this exact structure.\nNo explanation. No markdown. No code blocks. Raw JSON only.\n\n{\n  \"soft_skills_hints\": [\"hint1\", \"hint2\", \"hint3\"],\n  \"experience_years\": <number>,\n  \"education_level\": \"<bachelor|master|phd|other>\",\n  \"cv_score\": <number 0-100 reflecting soft skill richness: teamwork mentions,\n               leadership roles, communication evidence, project collaboration, etc.>\n}\n\nCV TEXT:\n{{ $json.cv_text }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "4fae29ca-22ce-49ea-bc9a-a73a576a6996",
+      "name": "Parse CV Skills"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.response\n            ?? $input.first().json.text\n            ?? $input.first().json.message?.content\n            ?? '';\n\nlet parsed;\ntry {\n  const clean = raw.replace(/```json/g, '').replace(/```/g, '').trim();\n  parsed = JSON.parse(clean);\n} catch(e) {\n  throw new Error('CV Parser — Ollama returned invalid JSON: ' + raw.substring(0, 300));\n}\n\n// Soft skills only — no hard_skills field\nparsed.soft_skills_hints = Array.isArray(parsed.soft_skills_hints)\n  ? parsed.soft_skills_hints\n  : [];\nparsed.experience_years  = parsed.experience_years ?? 0;\nparsed.education_level   = parsed.education_level  ?? 'other';\nparsed.cv_score          = parsed.cv_score          ?? 0;\n\nreturn [{ json: parsed }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        0
+      ],
+      "id": "dc0aff75-a146-4f14-b0f5-a7781cda5050",
+      "name": "Parse Ollama Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        496,
+        0
+      ],
+      "id": "eba1ab1a-a696-412e-bdd2-66319bb975af",
+      "name": "Return CV Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Parse CV Skills",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receive CV Data": {
+      "main": [
+        [
+          {
+            "node": "Extract CV Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV Fields": {
+      "main": [
+        [
+          {
+            "node": "Parse CV Skills",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CV Skills": {
+      "main": [
+        [
+          {
+            "node": "Parse Ollama Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Ollama Response": {
+      "main": [
+        [
+          {
+            "node": "Return CV Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "a2b89788-3a1e-4caa-8c6b-2d2516ebfe71",
+  "meta": {
+    "instanceId": "7d0b45276ce73f9390c4f4d9b25fd008d46255f2b94b6c10d52c42c480f14350"
+  },
+  "id": "836HSFv8G57JWjJO",
+  "tags": []
+}

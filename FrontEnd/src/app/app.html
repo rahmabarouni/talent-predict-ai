@@ -1,0 +1,262 @@
+<app-notification-toast />
+
+<div class="app-layout" [class.sidebar-open]="showSidebar() && isSidebarOpen"
+  [class.sidebar-closed]="showSidebar() && !isSidebarOpen" [class.no-sidebar]="!showSidebar()">
+
+  @if (showSidebar()) {
+
+  <!-- TASK 4: Floating toggle — ALWAYS visible, moves with sidebar -->
+  <button class="sidebar-float-toggle" (click)="toggleSidebar()" [style.left]="isSidebarOpen ? '240px' : '0px'"
+    [attr.aria-label]="isSidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'"
+    title="{{ isSidebarOpen ? 'Fermer' : 'Ouvrir' }} le menu">
+    @if (isSidebarOpen) {
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+    } @else {
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+    }
+  </button>
+
+  <!-- Sidebar panel -->
+  <aside class="sidebar" [style.width]="isSidebarOpen ? '240px' : '0px'" [class.sidebar-hidden]="!isSidebarOpen">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <img class="logo-icon" src="favicon.ico" alt="TalentPredict logo" width="36" height="36" />
+        <div class="logo-text-wrap">
+          <span class="logo-text">TalentPredict</span>
+          <span class="logo-subtext">AI Talent Suite</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+
+      <!-- EMPLOYEE menu (USER role) — no Jira -->
+      @if (!isAdmin()) {
+      <div class="nav-section">
+        <span class="nav-section-title">PRINCIPAL</span>
+
+        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span class="nav-label">Dashboard</span>
+        </a>
+
+        <a routerLink="/profile" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span class="nav-label">Mon Profil</span>
+        </a>
+
+        @if (isProfileSectionActive()) {
+        <div class="nav-submenu">
+          <a routerLink="/profile" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"
+            class="nav-item nav-subitem">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.09a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c0 .66.39 1.26 1 1.51H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+            <span class="nav-label">Parametres</span>
+          </a>
+
+          <a routerLink="/security" routerLinkActive="active" class="nav-item nav-subitem">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3l7.5 4.5v6c0 5-3.5 7.5-7.5 8.5-4-1-7.5-3.5-7.5-8.5v-6L12 3z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+            <span class="nav-label">Confidentialite</span>
+          </a>
+        </div>
+        }
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-section-title">TESTS</span>
+
+        <a routerLink="/evaluation/intro" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          <span class="nav-label">Soft Skills</span>
+        </a>
+
+        <a routerLink="/competences" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+          <span class="nav-label">Tech Skills</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-section-title">RESULTATS</span>
+
+        <a routerLink="/mes-resultats" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+          <span class="nav-label">Mes Resultats</span>
+        </a>
+      </div>
+
+      } <!-- end @if (!isAdmin()) -->
+
+      <!-- RECOMMANDATIONS — visible to employees only -->
+      @if (!isAdmin()) {
+      <div class="nav-section">
+        <span class="nav-section-title">RECOMMANDATIONS</span>
+
+        <a routerLink="/formations" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+            <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+          </svg>
+          <span class="nav-label">Mes Formations</span>
+        </a>
+      </div>
+      }
+
+      <!-- ADMIN / HR menu -->
+      @if (isAdmin()) {
+      <div class="nav-section">
+        <span class="nav-section-title">PILOTAGE</span>
+        <a routerLink="/admin/dashboard" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+            <path d="M22 12A10 10 0 0 0 12 2v10z" />
+          </svg>
+          <span class="nav-label">Tableau de Bord</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-section-title">GESTION INTERNE</span>
+
+        <a routerLink="/admin/users" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <polyline points="17 11 19 13 23 9" />
+          </svg>
+          <span class="nav-label">Effectifs (Employés)</span>
+        </a>
+
+        <a routerLink="/admin/formations" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+          <span class="nav-label">Plan de Formation</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-section-title">ÉVALUATIONS & SÉCURITÉ</span>
+
+        <a routerLink="/admin/campaigns" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+            <path d="M9 14l2 2 4-4" />
+          </svg>
+          <span class="nav-label">Communication & Campagnes</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <span class="nav-section-title">SUPPORT</span>
+        <a routerLink="/admin/profile" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span class="nav-label">Mon Compte</span>
+        </a>
+      </div>
+      }
+
+
+
+
+
+    </nav>
+
+    <!-- Sidebar footer -->
+    <div class="sidebar-footer">
+      <div class="user-card">
+        @if (avatarUrl()) {
+        <img class="user-avatar-img" [src]="avatarUrl()" alt="Avatar" />
+        } @else {
+        <div class="user-avatar">{{ getUserInitials() }}</div>
+        }
+        <div class="user-info">
+          <span class="user-name">{{ getCurrentUser()?.prenom }} {{ getCurrentUser()?.nom }}</span>
+          <span class="user-role">{{ getCurrentRoleLabel() }}</span>
+        </div>
+        <button class="logout-btn" (click)="showLogoutModal = true" title="Déconnexion">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+  }
+
+  <!-- Top actions (floating right) -->
+  @if (showSidebar()) {
+  <div class="top-bar-actions" style="display: flex; gap: 10px; align-items: center;">
+    <app-notifications-center />
+  </div>
+  }
+
+  <!-- Main content -->
+  <main [class.main-content]="showSidebar()"
+    [style.margin-left]="showSidebar() ? (isSidebarOpen ? '240px' : '0px') : '0px'"
+    [style.transition]="'margin-left 0.3s ease'" [class.auth-layout]="!showSidebar()">
+    <router-outlet />
+  </main>
+
+</div>
+
+<!-- ═══ Logout Confirmation Modal ═══ -->
+@if (showLogoutModal) {
+<div class="logout-overlay" (click)="showLogoutModal = false">
+  <div class="logout-modal" (click)="$event.stopPropagation()">
+    <div class="logout-modal-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+        <polyline points="16 17 21 12 16 7" />
+        <line x1="21" y1="12" x2="9" y2="12" />
+      </svg>
+    </div>
+    <h3>Se déconnecter ?</h3>
+    <p>Vous allez quitter votre session TalentPredict.</p>
+    <div class="logout-modal-actions">
+      <button class="logout-modal-cancel" (click)="showLogoutModal = false">Annuler</button>
+      <button class="logout-modal-confirm" (click)="logout()" [disabled]="logoutLoading">
+        @if (logoutLoading) {
+        <span class="logout-spinner"></span> Déconnexion...
+        } @else {
+        Confirmer
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}

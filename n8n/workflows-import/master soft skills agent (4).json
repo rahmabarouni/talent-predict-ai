@@ -1,0 +1,169 @@
+{
+  "name": "master soft skills agent",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "llama3.2:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        368,
+        208
+      ],
+      "id": "37cf260b-818b-4267-a38e-02bf561b39d5",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "zcrzpoNAhBR7F9af",
+          "name": "Ollama account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "master-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "7bcb0ce6-f280-458b-99f0-f53f682507ea",
+      "name": "Webhook",
+      "webhookId": "ee242873-5fff-4938-b6fa-5a962efd8d9b"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "05be0231-54ae-4f87-96c8-63fa191bccb8",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\n\nconst full_name = body.full_name ?? 'Unknown';\nconst email = body.email ?? '';\nconst extracted_cv_text = body.extracted_cv_text ?? '';\nconst github_username = body.github_username ?? '';\n\nconst questions = {};\nfor (let i = 1; i <= 18; i++) {\n  questions[`q${i}`] = Number(body[`q${i}`] ?? 0);\n}\n\nasync function callWorkflow(path, payload) {\n  try {\n    const res = await fetch(`http://localhost:5678/webhook/${path}`, {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify(payload)\n    });\n\n    const raw = await res.text();\n    try {\n      return JSON.parse(raw);\n    } catch (e) {\n      return { error: 'parse error', status: res.status, raw };\n    }\n  } catch (e) {\n    return { error: e.message ?? 'request failed' };\n  }\n}\n\nconst [cvResult, pcmResult, githubResult] = await Promise.all([\n  callWorkflow('soft-skills-extract', { extracted_cv_text, full_name, email }),\n  callWorkflow('pcm-test', { full_name, ...questions }),\n  callWorkflow('github-analysis', { github_username })\n]);\n\nreturn [{\n  json: {\n    full_name,\n    email,\n    github_username,\n    cv: cvResult,\n    pcm: pcmResult,\n    github: githubResult\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "22b83815-b848-43df-88ef-1c3b4f52159e",
+      "name": "Prepare & Call Sub-Workflows"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert HR analyst specialized in soft skills evaluation for recruitment.\n\nYou have received results from 3 analysis sources about a candidate:\n1. CV analysis → extracted soft skill hints from their resume\n2. PCM personality test → 6 personality type scores + dominant type\n3. GitHub activity → curiosity, collaboration, ownership, consistency scores\n\nYour job is to synthesize all 3 sources into a final soft skills evaluation.\n\nRules:\n- All scores must be 0 to 100\n- personality_type must come from PCM data (use pcm.personality_type exactly)\n- skills[] must contain ONLY soft skills (no programming languages, no frameworks)\n- source_data scores must use the EXACT values from cv.cv_score, pcm.pcm_score, github.github_score\n- Return ONLY raw JSON, no markdown, no explanation, no code blocks\n\n{\n  \"overall_score\": <weighted average: cv 40% + pcm 30% + github 30%>,\n  \"personality_type\": \"<exact value from pcm.personality_type>\",\n  \"skills\": [\n    { \"name\": \"<soft skill>\", \"score\": <0-100>, \"source\": \"<cv|pcm|github>\" },\n    { \"name\": \"<soft skill>\", \"score\": <0-100>, \"source\": \"<cv|pcm|github>\" },\n    { \"name\": \"<soft skill>\", \"score\": <0-100>, \"source\": \"<cv|pcm|github>\" },\n    { \"name\": \"<soft skill>\", \"score\": <0-100>, \"source\": \"<cv|pcm|github>\" },\n    { \"name\": \"<soft skill>\", \"score\": <0-100>, \"source\": \"<cv|pcm|github>\" }\n  ],\n  \"merged_soft_skills\": {\n    \"communication\":  <0-100>,\n    \"leadership\":     <0-100>,\n    \"teamwork\":       <0-100>,\n    \"adaptability\":   <0-100>,\n    \"problem_solving\": <0-100>\n  },\n  \"source_data\": {\n    \"cv_score\":     <exact value from cv.cv_score>,\n    \"pcm_score\":    <exact value from pcm.pcm_score>,\n    \"github_score\": <exact value from github.github_score>\n  },\n  \"summary\": \"<2-3 sentence professional summary of the candidate>\",\n  \"key_strengths\": [\"<strength 1>\", \"<strength 2>\", \"<strength 3>\"],\n  \"training_recommendations\": \"<1 sentence on what this candidate should develop>\"\n}\n\nCANDIDATE DATA:\n{{ JSON.stringify($json) }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        432,
+        0
+      ],
+      "id": "901ea318-8074-45df-b505-c9cd468fc3a3",
+      "name": "Master AI Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.text\n            ?? $input.first().json.response\n            ?? $input.first().json.output\n            ?? '';\n\nfunction clampScore(value) {\n  const n = Number(value);\n  if (!Number.isFinite(n)) return 0;\n  return Math.max(0, Math.min(100, Math.round(n * 100) / 100));\n}\n\nfunction extractFirstJsonObject(input) {\n  const text = String(input || '');\n  const start = text.indexOf('{');\n  if (start < 0) return '';\n\n  let depth = 0;\n  let inString = false;\n  let escaped = false;\n\n  for (let i = start; i < text.length; i++) {\n    const ch = text[i];\n\n    if (inString) {\n      if (escaped) {\n        escaped = false;\n      } else if (ch === '\\\\') {\n        escaped = true;\n      } else if (ch === '\"') {\n        inString = false;\n      }\n      continue;\n    }\n\n    if (ch === '\"') {\n      inString = true;\n      continue;\n    }\n\n    if (ch === '{') depth++;\n    if (ch === '}') depth--;\n\n    if (depth === 0) {\n      return text.slice(start, i + 1);\n    }\n  }\n\n  return text.slice(start);\n}\n\nfunction tryParseJson(input) {\n  const cleaned = String(input || '')\n    .replace(/```json/gi, '')\n    .replace(/```/g, '')\n    .replace(/[\\u201C\\u201D]/g, '\"')\n    .trim();\n\n  const candidate = extractFirstJsonObject(cleaned) || cleaned;\n  const withoutTrailingCommas = candidate.replace(/,\\s*([}\\]])/g, '$1');\n\n  try {\n    return JSON.parse(withoutTrailingCommas);\n  } catch (e) {\n    return null;\n  }\n}\n\nlet parsed = tryParseJson(raw);\n\n// Never throw here: return a safe object so backend can persist and UI can render.\nif (!parsed || typeof parsed !== 'object') {\n  parsed = {\n    overall_score: 0,\n    personality_type: 'Analyseur',\n    skills: [],\n    merged_soft_skills: {\n      communication: 0,\n      leadership: 0,\n      teamwork: 0,\n      adaptability: 0,\n      problem_solving: 0\n    },\n    source_data: {\n      cv_score: 0,\n      pcm_score: 0,\n      github_score: 0\n    },\n    summary: '',\n    key_strengths: [],\n    training_recommendations: 'LLM response was not valid JSON; using safe fallback.',\n    parse_error: true,\n    raw_excerpt: String(raw).substring(0, 300)\n  };\n}\n\nparsed.overall_score = clampScore(parsed.overall_score ?? parsed.overallScore ?? 0);\nparsed.personality_type = parsed.personality_type ?? parsed.personalityType ?? 'Analyseur';\nparsed.skills = Array.isArray(parsed.skills) ? parsed.skills : [];\nparsed.summary = String(parsed.summary ?? '');\n\nparsed.merged_soft_skills = parsed.merged_soft_skills ?? parsed.mergedSoftSkills ?? {};\nparsed.merged_soft_skills.communication = clampScore(parsed.merged_soft_skills.communication ?? 0);\nparsed.merged_soft_skills.leadership = clampScore(parsed.merged_soft_skills.leadership ?? 0);\nparsed.merged_soft_skills.teamwork = clampScore(parsed.merged_soft_skills.teamwork ?? 0);\nparsed.merged_soft_skills.adaptability = clampScore(parsed.merged_soft_skills.adaptability ?? 0);\nparsed.merged_soft_skills.problem_solving = clampScore(parsed.merged_soft_skills.problem_solving ?? 0);\n\nparsed.source_data = parsed.source_data ?? parsed.sourceData ?? {};\nparsed.source_data.cv_score = clampScore(parsed.source_data.cv_score ?? 0);\nparsed.source_data.pcm_score = clampScore(parsed.source_data.pcm_score ?? 0);\nparsed.source_data.github_score = clampScore(parsed.source_data.github_score ?? 0);\n\nparsed.key_strengths = Array.isArray(parsed.key_strengths) ? parsed.key_strengths : [];\nparsed.training_recommendations = parsed.training_recommendations ?? '';\n\nreturn [{ json: parsed }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "044979ec-1b12-4297-9459-d90183fe9b04",
+      "name": "Parse & Validate Final Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Master AI Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare & Call Sub-Workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare & Call Sub-Workflows": {
+      "main": [
+        [
+          {
+            "node": "Master AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Master AI Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse & Validate Final Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Validate Final Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4c65bd3d-4db0-4009-8e53-a95dbcfe4c20",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7d0b45276ce73f9390c4f4d9b25fd008d46255f2b94b6c10d52c42c480f14350"
+  },
+  "id": "XEzEy796TK49bKov",
+  "tags": []
+}

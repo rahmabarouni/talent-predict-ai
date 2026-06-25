@@ -1,0 +1,129 @@
+# ============================================================
+# GitLab CI/CD — Backend (Spring Boot)
+# ============================================================
+
+stages:
+  - validate
+  - build
+  - package
+  - docker
+  - deploy
+
+# --------------------------------------------------
+# Global settings
+# --------------------------------------------------
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/BackEnd/.m2/repository"
+  DOCKER_IMAGE: "mohamedabdeladhim/talentpredict"
+  DOCKER_TAG: "$CI_COMMIT_SHORT_SHA"
+  CONTAINER_NAME: "talentpredict-backend"
+
+# Maven dependency cache
+cache:
+  key:
+    files:
+      - BackEnd/pom.xml
+  paths:
+    - BackEnd/.m2/repository/
+  policy: pull-push
+
+# --------------------------------------------------
+# Stage: validate
+# --------------------------------------------------
+validate:
+  stage: validate
+  image: maven:3.9-eclipse-temurin-25
+  script:
+    - cd BackEnd
+    - mvn -B -q clean validate
+
+# --------------------------------------------------
+# Stage: build
+# --------------------------------------------------
+build:
+  stage: build
+  image: maven:3.9-eclipse-temurin-25
+  script:
+    - cd BackEnd
+    - mvn clean compile -B
+
+# --------------------------------------------------
+# Stage: package
+# ---------          -----------------------------------------
+package:
+  stage: package
+  image: maven:3.9-eclipse-temurin-25
+  script:
+    - cd BackEnd
+    - mvn package -DskipTests -B
+  artifacts:
+    paths:
+      - BackEnd/target/*.jar
+    expire_in: 1 day
+
+
+
+# --------------------------------------------------
+# Stage: docker — pushes to Docker Hub
+# --------------------------------------------------
+docker:
+  stage: docker
+  image: docker:24
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+  script:
+    - cd BackEnd
+    - docker build
+        --cache-from "$DOCKER_IMAGE:latest"
+        -t "$DOCKER_IMAGE:$DOCKER_TAG"
+        -t "$DOCKER_IMAGE:latest"
+        .
+    - docker push "$DOCKER_IMAGE:$DOCKER_TAG"
+    - docker push "$DOCKER_IMAGE:latest"
+  rules:
+    - when: always    # ← run on every branch always
+
+# --------------------------------------------------
+# Stage: deploy — SSH into your server and run container
+# --------------------------------------------------
+deploy:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh-client
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - ssh-keyscan -H "$DEPLOY_SERVER_IP" >> ~/.ssh/known_hosts
+  script:
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_IP "
+        echo '$DOCKER_HUB_PASSWORD' | docker login -u '$DOCKER_HUB_USERNAME' --password-stdin &&
+        docker pull $DOCKER_IMAGE:$DOCKER_TAG &&
+        docker stop $CONTAINER_NAME || true &&
+        docker rm $CONTAINER_NAME || true &&
+        docker run -d \
+          --name $CONTAINER_NAME \
+          --restart unless-stopped \
+          -p 8080:8080 \
+          -e SPRING_PROFILES_ACTIVE=prod \
+          -e SPRING_DATASOURCE_URL=$PROD_DB_URL \
+          -e SPRING_DATASOURCE_USERNAME=$PROD_DB_USERNAME \
+          -e SPRING_DATASOURCE_PASSWORD=$PROD_DB_PASSWORD \
+          -e JWT_SECRET=$JWT_SECRET \
+          -e OPENAI_API_KEY=$OPENAI_API_KEY \
+          -e OLLAMA_BASE_URL=$OLLAMA_BASE_URL \
+          -e AI_DATABASE_URL=$AI_DATABASE_URL \
+          -v /opt/talentpredict/uploads:/app/uploads \
+          $DOCKER_IMAGE:$DOCKER_TAG
+      "
+  rules:
+    - when: manual    # ← always show but requires click to deploy
+  environment:
+    name: production
+    url: http://$DEPLOY_SERVER_IP:8080
+

@@ -1,0 +1,49 @@
+<div class="pie-chart-wrapper">
+  <div class="chart-area" [style.width.px]="size" [style.height.px]="size">
+    <svg class="donut-chart" [attr.width]="size" [attr.height]="size" [attr.viewBox]="'0 0 ' + size + ' ' + size">
+      <circle
+        class="chart-track"
+        [attr.cx]="center"
+        [attr.cy]="center"
+        [attr.r]="radius"
+        [attr.stroke-width]="strokeWidth"
+      />
+
+      @if (hasData) {
+        @for (slice of normalizedSlices; track slice.label; let i = $index) {
+          <circle
+            class="chart-slice"
+            [attr.cx]="center"
+            [attr.cy]="center"
+            [attr.r]="radius"
+            [attr.stroke]="slice.color"
+            [attr.stroke-width]="strokeWidth"
+            [attr.stroke-dasharray]="getDashArray(slice.value)"
+            [attr.stroke-dashoffset]="getDashOffset(i)"
+          />
+        }
+      }
+    </svg>
+
+    <div class="chart-center">
+      <span class="center-label">{{ centerLabel }}</span>
+      <span class="center-value">{{ centerValue }}</span>
+    </div>
+  </div>
+
+  @if (showLegend) {
+    <div class="chart-legend">
+      @if (hasData) {
+        @for (slice of normalizedSlices; track slice.label) {
+          <div class="legend-item">
+            <span class="legend-dot" [style.background]="slice.color"></span>
+            <span class="legend-label">{{ slice.label }}</span>
+            <span class="legend-value">{{ slice.value }} ({{ getPercentage(slice.value) }}%)</span>
+          </div>
+        }
+      } @else {
+        <p class="legend-empty">Aucune donnée à afficher.</p>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Diagramme de Gantt - TalentPredict</title>
+    <!-- Chargement de Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'default',
+            gantt: {
+                titleTopMargin: 25,
+                barHeight: 30,
+                barGap: 4,
+                topPadding: 50,
+                leftPadding: 75,
+                gridLineStartPadding: 35,
+                fontSize: 14,
+                numberSectionStyles: 4,
+                axisFormat: "%W"
+            }
+        });
+    </script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            padding: 40px; 
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 1200px;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .mermaid { 
+            width: 100%; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Planification du projet TalentPredict</h1>
+        <div class="mermaid">
+gantt
+    title Diagramme de Gantt - Sprints
+    dateFormat  YYYY-MM-DD
+    
+    section Sprint 1 : Fondations
+    Setup Docker & Backend       :a1, 2026-02-01, 14d
+    Sécurité JWT & Entités       :a2, after a1, 7d
+    Maquettes Frontend           :a3, after a2, 7d
+    
+    section Sprint 2 : Moteurs
+    Workflows n8n                :b1, after a3, 10d
+    Parsing CV & GitHub API      :b2, after b1, 10d
+    Heuristique PCM & LinkedIn   :b3, after b2, 8d
+    
+    section Sprint 3 : IA Locale
+    Intégration Ollama           :c1, after b3, 10d
+    QCM & Challenges Code        :c2, after c1, 10d
+    Moteur de recommandations    :c3, after c2, 8d
+    
+    section Sprint 4 : Livraison
+    Dashboard Angular            :d1, after c3, 10d
+    Communication Hub & Rapports :d2, after d1, 10d
+    Tests & Déploiement final    :d3, after d2, 8d
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,538 @@
+<div class="user-management" [class.drawer-open]="isDrawerOpen()">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+      </div>
+      <div>
+        <h2>Gestion des Employés</h2>
+        <p class="header-subtitle">{{ stats().total }} collaborateurs · {{ stats().actifs }} actifs</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" id="add-user-btn" (click)="openAddModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nouvel Employé
+      </button>
+      <button class="btn-secondary" (click)="exportData()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exporter
+      </button>
+      <button class="btn-ghost" (click)="loadUsers()" [disabled]="loading()" title="Actualiser">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card" (click)="filterFromStats('all')" [class.active]="!filterStatut()">
+      <div class="stat-value">{{ stats().total }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card stat-success" (click)="filterFromStats('actifs')" [class.active]="filterStatut()==='actif'">
+      <div class="stat-value">{{ stats().actifs }}</div>
+      <div class="stat-label">Actifs</div>
+    </div>
+    <div class="stat-card stat-neutral" (click)="filterFromStats('inactifs')" [class.active]="filterStatut()==='inactif'">
+      <div class="stat-value">{{ stats().inactifs }}</div>
+      <div class="stat-label">Inactifs</div>
+    </div>
+    <div class="stat-card stat-info">
+      <div class="stat-value">{{ stats().avecFormation }}</div>
+      <div class="stat-label">Avec formation</div>
+    </div>
+    <div class="stat-card stat-warning">
+      <div class="stat-value">{{ stats().sansFormation }}</div>
+      <div class="stat-label">Sans formation</div>
+    </div>
+    <div class="stat-card stat-purple">
+      <div class="stat-value">{{ stats().avecPrediction }}</div>
+      <div class="stat-label">Prédiction IA</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-container">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search-users" placeholder="Rechercher par nom, email, poste…"
+        [value]="searchTerm()" (input)="searchTerm.set($any($event.target).value); onFilterChange()">
+    </div>
+    <div class="filter-dropdowns">
+      <select [value]="filterStatut()" (change)="filterStatut.set($any($event.target).value); onFilterChange()">
+        <option value="">Tous les statuts</option>
+        <option value="actif">Actif</option>
+        <option value="inactif">Inactif</option>
+      </select>
+      <select [value]="filterRole()" (change)="filterRole.set($any($event.target).value); onFilterChange()">
+        <option value="">Tous les rôles</option>
+        <option value="USER">Utilisateur</option>
+        <option value="ADMIN">Admin</option>
+      </select>
+      <select [value]="filterDepartement()" (change)="filterDepartement.set($any($event.target).value); onFilterChange()">
+        <option value="">Tous les départements</option>
+        @for (dept of departments(); track dept) {
+          <option [value]="dept">{{ dept }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Bar -->
+  @if (selectedUserIds().size > 0) {
+    <div class="bulk-actions-bar">
+      <span class="bulk-count">{{ selectedUserIds().size }} sélectionné(s)</span>
+      <div class="bulk-buttons">
+        <button (click)="bulkAction('Relance')">📩 Relance</button>
+        <button (click)="bulkAction('Formation')">📚 Formation</button>
+        <button class="text-danger" (click)="bulkAction('Désactiver')">🚫 Désactiver</button>
+      </div>
+    </div>
+  }
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="loading-card"><div class="loader"></div><p>Chargement…</p></div>
+  }
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="error-banner"><span>{{ error() }}</span><button (click)="loadUsers()">Réessayer</button></div>
+  }
+
+  <!-- Table -->
+  @if (!loading() && !error()) {
+    <div class="table-card">
+      <div class="table-header-info">
+        <span>{{ filteredSortedUsers().length }} résultat(s) · Page {{ currentPage() + 1 }}/{{ totalPages() }}</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th class="checkbox-cell">
+                <input type="checkbox" [checked]="isAllSelected()" (change)="toggleAllSelection($event)">
+              </th>
+              <th class="sortable" (click)="toggleSort('name')">Employé <span class="sort-icon">{{ sortIcon('name') }}</span></th>
+              <th class="sortable" (click)="toggleSort('department')">Département <span class="sort-icon">{{ sortIcon('department') }}</span></th>
+              <th class="sortable" (click)="toggleSort('role')">Rôle <span class="sort-icon">{{ sortIcon('role') }}</span></th>
+              <th>Statut</th>
+              <th class="sortable" (click)="toggleSort('formations')">Formations <span class="sort-icon">{{ sortIcon('formations') }}</span></th>
+              <th class="sortable" (click)="toggleSort('predictions')">Prédictions IA <span class="sort-icon">{{ sortIcon('predictions') }}</span></th>
+              <th class="sortable" (click)="toggleSort('createdAt')">Inscrit le <span class="sort-icon">{{ sortIcon('createdAt') }}</span></th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of paginatedUsers(); track user.id) {
+              <tr class="user-row" [class.selected]="selectedUserIds().has(user.id)" (click)="openDrawer(user)">
+                <td class="checkbox-cell" (click)="$event.stopPropagation()">
+                  <input type="checkbox" [checked]="selectedUserIds().has(user.id)" (change)="toggleSelection(user.id)">
+                </td>
+                <td>
+                  <div class="user-cell">
+                    @if (user.profilePictureUrl) {
+                      <div class="user-avatar"><img [src]="user.profilePictureUrl" alt="Avatar"></div>
+                    } @else {
+                      <div class="user-avatar-initials" [attr.data-role]="user.role">
+                        {{ (user.firstName||'?')[0] }}{{ (user.lastName||'')[0] }}
+                      </div>
+                    }
+                    <div class="user-info">
+                      <span class="user-name">{{ user.firstName }} {{ user.lastName }}</span>
+                      <a [href]="'mailto:'+user.email" class="user-email" (click)="$event.stopPropagation()">{{ user.email }}</a>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="department" [class.empty]="!user.department">{{ user.department || 'Non renseigné' }}</span></td>
+                <td (click)="$event.stopPropagation()">
+                  <select class="role-badge-select" [class.role-admin]="user.role==='ADMIN'" [class.role-user]="user.role==='USER'"
+                    [value]="user.role" (change)="initiateRoleChange(user.id, $event)">
+                    <option value="USER">Utilisateur</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </td>
+                <td>
+                  <span class="status-badge" [ngClass]="user.isActive ? 'actif' : 'inactif'">
+                    <span class="status-dot"></span>{{ user.isActive ? 'Actif' : 'Inactif' }}
+                  </span>
+                </td>
+                <td>
+                  @if (getSummary(user.id); as s) {
+                    <div class="formation-cell">
+                      <span class="count-badge" [class.zero]="s.formationsTotal===0">{{ s.formationsTotal }}</span>
+                      @if (s.formationsEnCours > 0) {
+                        <span class="sub-badge info">{{ s.formationsEnCours }} en cours</span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="loading-dot">…</span>
+                  }
+                </td>
+                <td>
+                  @if (getSummary(user.id); as s) {
+                    <div class="prediction-cell">
+                      <span class="count-badge" [class.zero]="s.predictionsCount===0">{{ s.predictionsCount }}</span>
+                      @if (s.latestPredictionScore != null) {
+                        <span class="score-chip" [class.high]="s.latestPredictionScore >= 0.7" [class.medium]="s.latestPredictionScore >= 0.4 && s.latestPredictionScore < 0.7" [class.low]="s.latestPredictionScore < 0.4">
+                          {{ formatScore(s.latestPredictionScore) }}
+                        </span>
+                      }
+                    </div>
+                  } @else {
+                    <span class="loading-dot">…</span>
+                  }
+                </td>
+                <td><span class="activity-text">{{ formatDate(user.createdAt) }}</span></td>
+                <td (click)="$event.stopPropagation()">
+                  <div class="actions">
+                    <button class="btn-action" (click)="openEditModal(user, $event)" title="Modifier">✏️</button>
+                    <button class="btn-action" (click)="openDrawer(user)" title="Voir profil">👁️</button>
+                    <button class="btn-action text-danger" (click)="confirmDelete(user, $event)" title="Supprimer">🗑️</button>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="empty-state"><p>Aucun utilisateur ne correspond à vos critères.</p></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1) {
+        <div class="pagination-bar">
+          <button class="page-btn" (click)="goToPage(currentPage()-1)" [disabled]="currentPage()===0">‹</button>
+          @for (p of pageNumbers(); track p) {
+            <button class="page-btn" [class.active]="p===currentPage()" (click)="goToPage(p)">{{ p+1 }}</button>
+          }
+          <button class="page-btn" (click)="goToPage(currentPage()+1)" [disabled]="currentPage()===totalPages()-1">›</button>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Drawer Backdrop -->
+@if (isDrawerOpen()) {
+  <div class="drawer-backdrop" (click)="closeDrawer()"></div>
+}
+
+<!-- Employee Profile Drawer -->
+<div class="side-drawer" [class.open]="isDrawerOpen()">
+  @if (selectedUserForDrawer(); as user) {
+    <div class="drawer-header">
+      <div class="drawer-user-main">
+        <div class="drawer-avatar">{{ (user.firstName||'?')[0] }}{{ (user.lastName||'')[0] }}</div>
+        <div>
+          <h3>{{ user.firstName }} {{ user.lastName }}</h3>
+          <span class="drawer-subtitle">{{ user.position || 'Poste non renseigné' }} · {{ user.department || 'Département non renseigné' }}</span>
+          <span class="status-badge mt-1" [ngClass]="user.isActive ? 'actif' : 'inactif'">
+            <span class="status-dot"></span>{{ user.isActive ? 'Actif' : 'Inactif' }}
+          </span>
+        </div>
+      </div>
+      <button class="btn-close" (click)="closeDrawer()">✕</button>
+    </div>
+
+    <div class="drawer-tabs">
+      <button [class.active]="activeDrawerTab()==='profil'" (click)="setDrawerTab('profil')">Profil</button>
+      <button [class.active]="activeDrawerTab()==='resultats'" (click)="setDrawerTab('resultats')">Compétences</button>
+      <button [class.active]="activeDrawerTab()==='formations'" (click)="setDrawerTab('formations')">
+        Formations
+        @if (drawerSummary(); as s) { <span class="tab-badge">{{ s.formationsTotal }}</span> }
+      </button>
+      <button [class.active]="activeDrawerTab()==='prediction'" (click)="setDrawerTab('prediction')">
+        Prédiction IA
+        @if (drawerSummary(); as s) { <span class="tab-badge">{{ s.predictionsCount }}</span> }
+      </button>
+    </div>
+
+    <div class="drawer-content">
+
+      <!-- Tab: Profil -->
+      @if (activeDrawerTab()==='profil') {
+        <div class="tab-pane">
+          <div class="info-grid">
+            <div class="info-group"><label>Email</label><p><a [href]="'mailto:'+user.email">{{ user.email }}</a></p></div>
+            <div class="info-group"><label>Département</label><p>{{ user.department || '—' }}</p></div>
+            <div class="info-group"><label>Poste</label><p>{{ user.position || '—' }}</p></div>
+            <div class="info-group"><label>Inscrit le</label><p>{{ formatDate(user.createdAt) }}</p></div>
+          </div>
+
+          @if (summaryLoading()) {
+            <div class="summary-loading mt-4"><div class="loader-sm"></div><span>Chargement des statistiques…</span></div>
+          } @else if (drawerSummary(); as s) {
+            <div class="summary-cards mt-4">
+              <div class="summary-card">
+                <div class="summary-val">{{ s.formationsTotal }}</div>
+                <div class="summary-lbl">Formations</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-val">{{ s.formationsEnCours }}</div>
+                <div class="summary-lbl">En cours</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-val">{{ s.formationsTerminees }}</div>
+                <div class="summary-lbl">Terminées</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-val">{{ s.predictionsCount }}</div>
+                <div class="summary-lbl">Prédictions IA</div>
+              </div>
+            </div>
+          }
+
+          <div class="profile-links mt-4">
+            <h4>Réseaux</h4>
+            <div class="link-buttons">
+              @if (getSummary(user.id)?.linkedinUrl) {
+                <a [href]="getSummary(user.id)?.linkedinUrl" target="_blank" class="btn-link linkedin">🔵 LinkedIn</a>
+              }
+              @if (getSummary(user.id)?.githubUrl) {
+                <a [href]="getSummary(user.id)?.githubUrl" target="_blank" class="btn-link github">⚫ GitHub</a>
+              }
+              @if (!getSummary(user.id)?.linkedinUrl && !getSummary(user.id)?.githubUrl) {
+                <span class="text-muted small">Aucun lien social renseigné.</span>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Tab: Compétences -->
+      @if (activeDrawerTab()==='resultats') {
+        <div class="tab-pane">
+          <h4>Compétences déclarées</h4>
+          @if (skillsLoading()) {
+            <div class="empty-box">Chargement…</div>
+          } @else if (skillsError()) {
+            <div class="empty-box error">{{ skillsError() }}</div>
+          } @else if (userSkills().length === 0) {
+            <div class="empty-box">Aucune compétence enregistrée.</div>
+          } @else {
+            <ul class="list-cards">
+              @for (skill of userSkills(); track skill.id) {
+                <li>
+                  <div>
+                    <strong>{{ skill.nom }}</strong>
+                    <span>{{ skill.type }} · Niveau {{ skill.niveau }}</span>
+                  </div>
+                  <div class="skill-actions">
+                    <span class="badge" [ngClass]="skill.validee ? 'success' : 'warning'">{{ skill.validee ? 'Validée' : 'En attente' }}</span>
+                    @if (isAdmin() && !skill.validee) {
+                      <button class="btn-small" (click)="validateSkill(skill.id, $event)" [disabled]="isSkillValidating(skill.id)">
+                        {{ isSkillValidating(skill.id) ? '…' : 'Valider' }}
+                      </button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      <!-- Tab: Formations (REAL DATA) -->
+      @if (activeDrawerTab()==='formations') {
+        <div class="tab-pane">
+          @if (formationsLoading()) {
+            <div class="empty-box">Chargement des formations…</div>
+          } @else if (formationsError()) {
+            <div class="empty-box error">{{ formationsError() }}</div>
+          } @else {
+            <div class="formations-stats-row mb-3">
+              <span><strong>{{ drawerFormations().total }}</strong> Total</span>
+              <span class="text-info"><strong>{{ drawerFormations().enCours }}</strong> En cours</span>
+              <span class="text-success"><strong>{{ drawerFormations().terminees }}</strong> Terminée(s)</span>
+              <span class="text-warning"><strong>{{ drawerFormations().attente }}</strong> En attente</span>
+            </div>
+            @if (userFormations().length === 0) {
+              <div class="empty-box">Aucune formation enregistrée.</div>
+            } @else {
+              <ul class="list-cards">
+                @for (f of userFormations(); track f.id) {
+                  <li>
+                    <div class="full-width">
+                      <div class="d-flex justify-between">
+                        <strong>{{ f.titre }}</strong>
+                        <span class="badge" [ngClass]="getStatutClass(f.statut)">{{ getStatutLabel(f.statut) }}</span>
+                      </div>
+                      <div class="progress-row mt-1">
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" [style.width.%]="f.progression"></div></div>
+                        <span class="progress-pct">{{ f.progression }}%</span>
+                      </div>
+                      @if (f.fournisseur) { <small class="text-muted">{{ f.fournisseur }}</small> }
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+          }
+        </div>
+      }
+
+      <!-- Tab: Prédiction IA (REAL DATA) -->
+      @if (activeDrawerTab()==='prediction') {
+        <div class="tab-pane">
+          @if (summaryLoading()) {
+            <div class="empty-box">Chargement…</div>
+          } @else if (drawerSummary(); as s) {
+            @if (s.predictionsCount === 0) {
+              <div class="empty-box">Aucune prédiction IA disponible pour cet utilisateur.</div>
+            } @else {
+              <div class="ai-header">
+                <span class="ai-icon">✨</span>
+                <h4>Profil IA & Potentiel</h4>
+              </div>
+              <div class="ai-summary-card mt-3">
+                <div class="ai-row">
+                  <label>Score de confiance</label>
+                  <div class="score-ring-sm">
+                    <span>{{ formatScore(s.latestPredictionScore) }}</span>
+                  </div>
+                </div>
+                <div class="ai-row mt-2">
+                  <label>Statut</label>
+                  <span class="badge info">{{ s.latestPredictionLabel || '—' }}</span>
+                </div>
+                <div class="ai-row mt-2">
+                  <label>Dernière prédiction</label>
+                  <span>{{ formatDate(s.latestPredictionDate) }}</span>
+                </div>
+                <div class="ai-row mt-2">
+                  <label>Total prédictions</label>
+                  <span><strong>{{ s.predictionsCount }}</strong></span>
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="empty-box">Impossible de charger les données IA.</div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="drawer-footer">
+      @if (getSummary(user.id)?.githubUrl) {
+        <a [href]="getSummary(user.id)?.githubUrl" target="_blank" class="btn-outline social-btn" title="GitHub">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+        </a>
+      }
+      @if (getSummary(user.id)?.linkedinUrl) {
+        <a [href]="getSummary(user.id)?.linkedinUrl" target="_blank" class="btn-outline social-btn" title="LinkedIn">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+      }
+      <button class="btn-outline" (click)="openEditModal(user)">✏️ Modifier</button>
+      <button class="btn-danger" (click)="confirmDelete(user)">🗑️ Supprimer</button>
+    </div>
+  }
+</div>
+
+<!-- Role Change Modal -->
+@if (showRoleConfirm()) {
+  <div class="modal-overlay" (click)="cancelRoleChange()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-icon warning">⚠️</div>
+      <h3>Changement de Rôle</h3>
+      <p>Accorder le rôle <strong>{{ pendingRoleChange()?.newRole }}</strong> ?</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="cancelRoleChange()">Annuler</button>
+        <button class="btn-confirm" (click)="confirmRoleChange()">Confirmer</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Delete Modal -->
+@if (showDeleteConfirm()) {
+  <div class="modal-overlay" (click)="cancelDelete()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-icon danger">🗑️</div>
+      <h3>Supprimer le compte</h3>
+      <p>Voulez-vous vraiment supprimer <strong>{{ selectedUserForDelete()?.firstName }} {{ selectedUserForDelete()?.lastName }}</strong> ?</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" (click)="cancelDelete()">Annuler</button>
+        <button class="btn-danger-confirm" (click)="deleteUser()">Supprimer</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Create / Edit Modal -->
+@if (showUserModal()) {
+  <div class="modal-overlay" (click)="closeUserModal()">
+    <div class="modal-content user-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ isEditing() ? 'Modifier l\'utilisateur' : 'Ajouter un utilisateur' }}</h3>
+        <button class="btn-close" (click)="closeUserModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="userForm" class="user-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prénom *</label>
+              <input type="text" formControlName="firstName" placeholder="Jean" [class.error]="fieldError('firstName')">
+              @if (fieldError('firstName')) { <span class="field-error">{{ fieldError('firstName') }}</span> }
+            </div>
+            <div class="form-group">
+              <label>Nom *</label>
+              <input type="text" formControlName="lastName" placeholder="Dupont" [class.error]="fieldError('lastName')">
+              @if (fieldError('lastName')) { <span class="field-error">{{ fieldError('lastName') }}</span> }
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" formControlName="email" placeholder="jean@entreprise.com" [class.error]="fieldError('email')">
+            @if (fieldError('email')) { <span class="field-error">{{ fieldError('email') }}</span> }
+          </div>
+          @if (!isEditing()) {
+            <div class="form-group">
+              <label>Mot de passe *</label>
+              <input type="password" formControlName="password" placeholder="8 caractères minimum" [class.error]="fieldError('password')">
+              @if (fieldError('password')) { <span class="field-error">{{ fieldError('password') }}</span> }
+            </div>
+          }
+          <div class="form-row">
+            <div class="form-group">
+              <label>Département</label>
+              <input type="text" formControlName="department" placeholder="IT, RH, Marketing…">
+            </div>
+            <div class="form-group">
+              <label>Poste</label>
+              <input type="text" formControlName="position" placeholder="Développeur Senior…">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Rôle</label>
+              <select formControlName="role">
+                <option value="USER">Utilisateur</option>
+                <option value="ADMIN">Administrateur</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Statut</label>
+              <select formControlName="isActive">
+                <option [ngValue]="true">Actif</option>
+                <option [ngValue]="false">Inactif</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="closeUserModal()">Annuler</button>
+        <button class="btn-confirm" (click)="saveUser()" [disabled]="submitting()">
+          {{ submitting() ? 'Enregistrement…' : (isEditing() ? 'Mettre à jour' : 'Créer') }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

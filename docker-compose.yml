@@ -1,0 +1,195 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: talentpredict-db
+    environment:
+      POSTGRES_DB: talentpredict
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "11111111"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d talentpredict"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talentpredict-net
+
+  # ============================================
+  # Spring Boot Backend
+  # ============================================
+  backend:
+    build:
+      context: ./BackEnd
+      dockerfile: Dockerfile
+    container_name: talentpredict-backend
+    environment:
+      # Database — point at Docker service, NOT localhost
+      DB_URL: jdbc:postgresql://postgres:5432/talentpredict
+      DB_USERNAME: postgres
+      # Let Hibernate (ddl-auto=update) create tables; disable schema.sql on fresh DB
+      SPRING_SQL_INIT_MODE: never
+      SPRING_JPA_DEFER_DATASOURCE_INITIALIZATION: "true"
+      DB_PASSWORD: "11111111"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/talentpredict
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "11111111"
+      # Internal service URLs
+      N8N_BASE_URL: http://n8n:5678
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+      CV_EXTRACTOR_URL: http://cv-extractor:9000
+      FRONTEND_BASE_URL: http://localhost:4200
+      APP_BASE_URL: http://localhost:8081
+      # Secrets — interpolated from host .env by Docker Compose
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_FROM_NUMBER: ${TWILIO_FROM_NUMBER:-+13185798994}
+      AI_SERVICE_API_KEY: ${AI_SERVICE_API_KEY}
+      # LLM (Ollama via host gateway)
+      OPENROUTER_API_URL: http://host.docker.internal:11434/v1/chat/completions
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-ollama}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-llama3.2:latest}
+      OPENROUTER_MAX_RETRIES: ${OPENROUTER_MAX_RETRIES:-2}
+      OPENROUTER_BACKOFF_BASE_MS: ${OPENROUTER_BACKOFF_BASE_MS:-800}
+      HTTP_CLIENT_CONNECT_TIMEOUT_MS: ${HTTP_CLIENT_CONNECT_TIMEOUT_MS:-5000}
+      HTTP_CLIENT_READ_TIMEOUT_MS: ${HTTP_CLIENT_READ_TIMEOUT_MS:-45000}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - talentpredict-net
+    restart: on-failure
+
+  # ============================================
+  # Python AI Service
+  # ============================================
+  ai-service:
+    build:
+      context: ./talentpredict-ai
+      dockerfile: Dockerfile
+    container_name: talentpredict-ai
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      CORS_ORIGINS: "http://localhost:4200,http://localhost:80,http://frontend:80"
+      # Point to Ollama running on the Windows host
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: llama3.2:latest
+      ANTHROPIC_BASE_URL: http://host.docker.internal:11434/v1
+      # Database connection
+      AI_DB_HOST: postgres
+      AI_DB_PASSWORD: "11111111"
+      AI_DB_NAME: talentpredict
+    ports:
+      - "8000:8000"
+    networks:
+      - talentpredict-net
+    restart: on-failure
+
+  # ============================================
+  # CV Text Extraction Service (Python)
+  # Called by n8n and Backend for PDF/DOCX parsing
+  # ============================================
+  cv-extractor:
+    build:
+      context: ./talentpredict-ai
+      dockerfile: Dockerfile.cv-extractor
+    container_name: talentpredict-cv-extractor
+    environment:
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "9000:9000"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talentpredict-net
+
+  # ============================================
+  # n8n Workflow Engine (SQLite embedded)
+  # ============================================
+  n8n:
+    build:
+      context: ./n8n/custom
+      dockerfile: Dockerfile
+    container_name: talentpredict-n8n
+    depends_on:
+      cv-extractor:
+        condition: service_healthy
+    environment:
+      DB_TYPE: sqlite
+      N8N_ENCRYPTION_KEY: "MinimumSixteenCharactersKey"
+      N8N_HOST: 0.0.0.0
+      N8N_PORT: 5678
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_EDITOR_BASE_URL: http://localhost:5678/
+      NODE_ENV: production
+      TZ: UTC
+      CV_EXTRACTOR_URL: http://cv-extractor:9000
+      # Disable all telemetry/analytics (silences PostHog + Rudder ENOTFOUND errors)
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TELEMETRY_ENABLED: "false"
+      N8N_HIRING_BANNER_ENABLED: "false"
+      EXTERNAL_HOOK_FILES: ""
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    mem_limit: 1g
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5678/healthz', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - talentpredict-net
+
+  # ============================================
+  # Angular Frontend (served via nginx)
+  # ============================================
+  frontend:
+    build:
+      context: ./FrontEnd
+      dockerfile: Dockerfile
+    container_name: talentpredict-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+      - ai-service
+    networks:
+      - talentpredict-net
+    restart: on-failure
+
+volumes:
+  postgres_data:
+  n8n_data:
+
+networks:
+  talentpredict-net:
+    driver: bridge
+
+

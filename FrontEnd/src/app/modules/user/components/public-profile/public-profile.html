@@ -1,0 +1,46 @@
+<div class="public-profile-container">
+  @if (loading) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Chargement du profil...</p>
+    </div>
+  } @else if (error) {
+    <div class="error-state">
+      <h2>Profil introuvable</h2>
+      <p>Ce profil n'existe pas ou n'est pas public.</p>
+    </div>
+  } @else if (profileData) {
+    <div class="profile-card">
+      <div class="profile-header">
+        <div class="avatar">{{ profileData.firstName?.charAt(0) }}{{ profileData.lastName?.charAt(0) }}</div>
+        <h1>{{ profileData.firstName }} {{ profileData.lastName }}</h1>
+        <p class="tagline">Certifié par TalentPredict AI</p>
+      </div>
+
+      <div class="skills-section">
+        <h2>Compétences validées</h2>
+        @if (profileData.skills?.length > 0) {
+          <div class="skills-grid">
+            @for (skill of profileData.skills; track skill.id) {
+              <div class="skill-tag">
+                <span class="skill-name">{{ skill.nom }}</span>
+                <div class="skill-level">
+                  @for (i of [1,2,3,4,5]; track i) {
+                    <span class="dot" [class.filled]="i <= (skill.niveau || 0)"></span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="no-skills">Aucune compétence validée pour le moment.</p>
+        }
+      </div>
+      
+      <div class="cta-section">
+        <p>Ce profil est généré et certifié par la plateforme TalentPredict.</p>
+        <button class="btn btn-primary" [routerLink]="['/']">Découvrir TalentPredict</button>
+      </div>
+    </div>
+  }
+</div>

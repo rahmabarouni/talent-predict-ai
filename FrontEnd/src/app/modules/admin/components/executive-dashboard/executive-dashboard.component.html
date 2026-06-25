@@ -1,0 +1,468 @@
+<section class="exec-dashboard">
+
+  <!-- ═══════════════════ TOP HEADER BAR ═══════════════════ -->
+  <header class="dash-header">
+    <div class="dash-header-left">
+      <div class="dash-title-block">
+        <h1 class="dash-title">Executive Dashboard</h1>
+        <p class="dash-subtitle">Vue d'ensemble de votre plateforme RH en temps réel</p>
+      </div>
+      <div class="dash-status">
+        <span class="live-dot"></span>
+        <span class="live-label">Live · {{ currentTime() | date:'HH:mm' }}</span>
+      </div>
+    </div>
+    <div class="dash-header-right">
+      <button class="hdr-btn hdr-btn-ghost" (click)="refreshData()" [disabled]="loading()" id="dash-refresh-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [class.spinning]="loading()">
+          <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+        Actualiser
+      </button>
+      <button class="hdr-btn hdr-btn-ghost" (click)="exportReport()" id="dash-export-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Exporter
+      </button>
+      <button class="hdr-btn hdr-btn-primary" (click)="sendBulkReminder()" id="dash-reminder-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 01-3.46 0"/>
+        </svg>
+        Relance groupée
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════ ALERT BANNERS ═══════════════════ -->
+  <div class="alerts-zone">
+
+    @if (testCoverage() < 20 && !dismissAlert().coverage) {
+      <div class="alert-strip alert-warning" role="alert">
+        <div class="alert-icon-wrap warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="alert-body">
+          <strong>ATTENTION</strong> — Seulement {{ testCoverage() }}% des employés ont passé un test.
+        </div>
+        <button class="alert-close" (click)="dismiss('coverage')" aria-label="Fermer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    }
+    @if (pendingFormationCount() > 0 && !dismissAlert().formation) {
+      <div class="alert-strip alert-info" role="alert">
+        <div class="alert-icon-wrap info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+        </div>
+        <div class="alert-body">
+          <strong>INFO</strong> — {{ pendingFormationCount() }} formations en attente de votre approbation.
+        </div>
+        <button class="alert-close" (click)="dismiss('formation')" aria-label="Fermer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- ═══════════════════ LOADING STATE ═══════════════════ -->
+  @if (loading()) {
+    <div class="loading-bar-wrap">
+      <div class="loading-bar"></div>
+    </div>
+  }
+
+  <!-- ═══════════════════ KPI GRID ═══════════════════ -->
+  <div class="kpi-grid">
+    @for (kpi of kpis(); track kpi.label; let i = $index) {
+      <div class="kpi-card kpi-{{ kpi.color }}" [style.animation-delay]="(i * 60) + 'ms'">
+        <div class="kpi-card-accent"></div>
+        <div class="kpi-top-row">
+          <span class="kpi-label">{{ kpi.label }}</span>
+          <div class="kpi-icon-wrap kpi-icon-{{ kpi.color }}">
+            <!-- Users icon -->
+            @if (kpi.icon === 'users') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                <path d="M16 3.13a4 4 0 010 7.75"/>
+              </svg>
+            }
+            <!-- Check-circle icon -->
+            @if (kpi.icon === 'check-circle') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            }
+            <!-- Star icon -->
+            @if (kpi.icon === 'star') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            }
+            <!-- Clock icon -->
+            @if (kpi.icon === 'clock') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            }
+            <!-- Play icon -->
+            @if (kpi.icon === 'play') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="10 8 16 12 10 16 10 8"/>
+              </svg>
+            }
+            <!-- Award icon -->
+            @if (kpi.icon === 'award') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="8" r="7"/>
+                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+              </svg>
+            }
+            <!-- Alert icon -->
+            @if (kpi.icon === 'alert') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            }
+          </div>
+        </div>
+        <div class="kpi-value">{{ kpi.value }}</div>
+        <div class="kpi-bottom-row">
+          <span class="kpi-trend trend-{{ kpi.trend }}">
+            @if (kpi.trend === 'up') { ↑ }
+            @if (kpi.trend === 'down') { ↓ }
+            {{ kpi.trendValue }}
+          </span>
+          <span class="kpi-sub">{{ kpi.subLabel }}</span>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ═══════════════════ ANALYTICS + QUEUE ROW ═══════════════════ -->
+  <div class="mid-row">
+
+    <!-- Analytics panel with tabs -->
+    <div class="panel analytics-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Analyses</h2>
+        <div class="tab-bar" role="tablist">
+          <button class="tab-btn" [class.active]="activeAnalyticsTab() === 'skills'"
+            (click)="setAnalyticsTab('skills')" role="tab" id="tab-skills">Compétences</button>
+          <button class="tab-btn" [class.active]="activeAnalyticsTab() === 'mbti'"
+            (click)="setAnalyticsTab('mbti')" role="tab" id="tab-mbti">Personnalité</button>
+          <button class="tab-btn" [class.active]="activeAnalyticsTab() === 'trend'"
+            (click)="setAnalyticsTab('trend')" role="tab" id="tab-trend">Évolution</button>
+        </div>
+      </div>
+      <div class="chart-area">
+        <div class="chart-pane" [class.chart-pane-visible]="activeAnalyticsTab() === 'skills'">
+          <canvas #skillsChartRef id="skillsChart" height="220"></canvas>
+        </div>
+        <div class="chart-pane" [class.chart-pane-visible]="activeAnalyticsTab() === 'mbti'">
+          <canvas #mbtiChartRef id="mbtiChart" height="220"></canvas>
+        </div>
+        <div class="chart-pane" [class.chart-pane-visible]="activeAnalyticsTab() === 'trend'">
+          <canvas #trendChartRef id="trendChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formation Approval Queue -->
+    <div class="panel queue-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">File d'approbation</h2>
+        @if (pendingFormationsList().length > 0) {
+          <span class="badge badge-red">{{ pendingFormationsList().length }} en attente</span>
+        }
+      </div>
+      <div class="queue-list">
+        @if (pendingFormationsList().length === 0) {
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <p>Aucune formation en attente</p>
+          </div>
+        }
+        @for (f of pendingFormationsList(); track f.id) {
+          <div class="queue-item">
+            <div class="queue-item-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+                <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+              </svg>
+            </div>
+            <div class="queue-item-info">
+              <span class="queue-item-title">{{ f.titre }}</span>
+              <span class="queue-item-meta">{{ f.fournisseur || 'Formation interne' }}</span>
+            </div>
+            <div class="queue-item-actions">
+              <button class="action-btn approve-btn" (click)="approveFormation(f)" title="Approuver">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </button>
+              <button class="action-btn reject-btn" (click)="rejectFormation(f)" title="Rejeter">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ ONBOARDING TRACKER ═══════════════════ -->
+  <div class="panel onboarding-panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Suivi Onboarding</h2>
+      <span class="panel-subtitle">{{ onboardingStats().total }} employés au total</span>
+    </div>
+    <div class="onboarding-grid">
+      <div class="onboarding-stage">
+        <div class="stage-header">
+          <div class="stage-icon-wrap stage-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stage-name">Profil complété</div>
+            <div class="stage-count">{{ onboardingStats().completedProfile }} / {{ onboardingStats().total }}</div>
+          </div>
+          <div class="stage-pct stage-pct-blue">{{ onboardingProfilePct() }}%</div>
+        </div>
+        <div class="stage-track">
+          <div class="stage-fill fill-blue" [style.width.%]="onboardingProfilePct()"></div>
+        </div>
+      </div>
+
+      <div class="onboarding-stage">
+        <div class="stage-header">
+          <div class="stage-icon-wrap stage-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stage-name">Premier test passé</div>
+            <div class="stage-count">{{ onboardingStats().firstTest }} / {{ onboardingStats().total }}</div>
+          </div>
+          <div class="stage-pct stage-pct-purple">{{ onboardingTestPct() }}%</div>
+        </div>
+        <div class="stage-track">
+          <div class="stage-fill fill-purple" [style.width.%]="onboardingTestPct()"></div>
+        </div>
+      </div>
+
+      <div class="onboarding-stage">
+        <div class="stage-header">
+          <div class="stage-icon-wrap stage-teal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stage-name">Première formation</div>
+            <div class="stage-count">{{ onboardingStats().firstFormation }} / {{ onboardingStats().total }}</div>
+          </div>
+          <div class="stage-pct stage-pct-teal">{{ onboardingFormationPct() }}%</div>
+        </div>
+        <div class="stage-track">
+          <div class="stage-fill fill-teal" [style.width.%]="onboardingFormationPct()"></div>
+        </div>
+      </div>
+
+      <div class="onboarding-stage">
+        <div class="stage-header">
+          <div class="stage-icon-wrap stage-orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4l3 3"/>
+            </svg>
+          </div>
+          <div>
+            <div class="stage-name">Prédiction IA générée</div>
+            <div class="stage-count">{{ onboardingStats().aiPrediction }} / {{ onboardingStats().total }}</div>
+          </div>
+          <div class="stage-pct stage-pct-orange">
+            {{ onboardingStats().total > 0 ? (onboardingStats().aiPrediction / onboardingStats().total * 100 | number:'1.0-0') : 0 }}%
+          </div>
+        </div>
+        <div class="stage-track">
+          <div class="stage-fill fill-orange"
+            [style.width.%]="onboardingStats().total > 0 ? (onboardingStats().aiPrediction / onboardingStats().total * 100) : 0">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ BOTTOM ROW: DEPT + RISK ═══════════════════ -->
+  <div class="bottom-row">
+
+    <!-- Department Breakdown Chart -->
+    <div class="panel dept-panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Analyse par Département</h2>
+        <span class="panel-subtitle">Score moyen &amp; couverture tests</span>
+      </div>
+      <div class="dept-chart-area">
+        <canvas #deptChartRef id="deptChart"></canvas>
+      </div>
+      <!-- Dept stat rows -->
+      <div class="dept-rows">
+        @for (d of departmentStats(); track d.dept) {
+          <div class="dept-row">
+            <span class="dept-name">{{ d.dept }}</span>
+            <div class="dept-bars">
+              <div class="dept-bar-wrap">
+                <div class="dept-bar-fill dept-bar-score" [style.width.%]="d.avgScore"></div>
+              </div>
+              <div class="dept-bar-wrap">
+                <div class="dept-bar-fill dept-bar-cover" [style.width.%]="d.coverage"></div>
+              </div>
+            </div>
+            <div class="dept-vals">
+              <span class="dept-val score-col">{{ d.avgScore }}<small>/100</small></span>
+              <span class="dept-val cover-col">{{ d.coverage }}<small>%</small></span>
+            </div>
+          </div>
+        }
+        @if (departmentStats().length === 0) {
+          <div class="empty-state"><p>Aucune donnée département</p></div>
+        }
+      </div>
+    </div>
+
+    <!-- HiPo Talents + Risk Distribution -->
+    <div class="side-panels">
+
+      <!-- HiPo Talents List -->
+      <div class="panel hipo-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Talents HiPo (9-Box)</h2>
+          <span class="badge badge-purple">{{ hipoTalents().length }} détectés</span>
+        </div>
+        <div class="hipo-list">
+          @if (hipoTalents().length === 0) {
+            <div class="empty-state">
+              <p>Aucun profil HiPo détecté pour le moment</p>
+            </div>
+          }
+          @for (talent of hipoTalents(); track talent.userId) {
+            <div class="hipo-item">
+              <div class="hipo-item-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </div>
+              <div class="hipo-item-info">
+                <span class="hipo-item-name">{{ talent.fullName }}</span>
+                <span class="hipo-item-cat">{{ talent.category }} ({{ talent.nineBoxPosition }})</span>
+              </div>
+              <div class="hipo-item-score">
+                <span class="score-val">{{ talent.finalHiPoScore | number:'1.0-0' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="panel insights-panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Résumé Clé</h2>
+        </div>
+        <div class="insights-body">
+          <div class="insight-row">
+            <div class="insight-icon insight-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div class="insight-text">
+              <span class="insight-label">Meilleur département</span>
+              <span class="insight-val">{{ topDepartment() }}</span>
+            </div>
+          </div>
+          <div class="insight-row">
+            <div class="insight-icon insight-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <div class="insight-text">
+              <span class="insight-label">Personnalité dominante</span>
+              <span class="insight-val">{{ topMbtiType() }}</span>
+            </div>
+          </div>
+          <div class="insight-row">
+            <div class="insight-icon insight-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div class="insight-text">
+              <span class="insight-label">Taux de couverture tests</span>
+              <span class="insight-val">{{ testCoverage() }}%</span>
+            </div>
+          </div>
+
+          <div class="insight-row">
+            <div class="insight-icon insight-orange">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <div class="insight-text">
+              <span class="insight-label">Talents à haut potentiel</span>
+              <span class="insight-val">{{ hipoTalents().length > 0 ? hipoTalents().length + ' profils détectés' : 'Analyse en cours' }}</span>
+            </div>
+          </div>
+
+          <div class="insight-row">
+            <div class="insight-icon insight-teal">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+              </svg>
+            </div>
+            <div class="insight-text">
+              <span class="insight-label">Prédictions IA générées</span>
+              <span class="insight-val">{{ onboardingStats().aiPrediction }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</section>
